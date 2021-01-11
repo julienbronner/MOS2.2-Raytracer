@@ -1,0 +1,37 @@
+# Faire la sphere
+
+equation t² + 2*t*<u,C-O> + ||C-O||² - R² = 0
+
+u = (j-W/2, i-H/2,  -W/(2*tan(alpha/2)) ) //pas sur de ça
+
+class Vector{
+        double coord[3],
+        double sqrNorm(),
+        Vector get_normalized
+}
+vector operator +(const Vector Ra, vector Rb)
+double dot(..., ...)
+Vector operator *(..., double s)
+
+
+class Sphere{
+    Vector O,
+    double R,
+}
+
+class Ray{
+    Vector C, u //origine et vecteur directeur
+}
+
+# Faire de la réflexion
+
+Lumiere  en (-1,20,40)
+
+# Plusieurs spheres
+
+class Scene{
+    bool intersect(Ray, P, N, albedo)
+    std::vector<Sphere> objects;
+
+}
+dans main scene.objects.push_back(S1)
