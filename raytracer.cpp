@@ -7,6 +7,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "Template_creation_image/stb_image.h"
 
+#define _USE_MATH_DEFINES
 #include <math.h>
 #include <algorithm>
 
@@ -23,7 +24,7 @@ public:
         return coords[0]*coords[0] + coords[1]*coords[1] + coords[2]*coords[2];
     };
     Vector get_normalized() const {
-        float norm = sqrt(sqrNorm());
+        double norm = sqrt(sqrNorm());
         return Vector(coords[0]/norm, coords[1]/norm, coords[2]/norm);
     };
 private:
@@ -95,7 +96,7 @@ public:
     Vector rho;
 };
 
-class Light{
+class Light {
 public:
     Light(const double& I, const Vector& L) : I(I), L(L) {
     }
@@ -105,15 +106,29 @@ public:
 
 class Scene{
 public:
-    Scene(Light& Lum) : Lum(Lum) {
+    Scene(Light& Lum, Vector& color) : Lum(Lum), color(color) {
     }
-    Vector intersect(Ray& r){
-        for(Sphere& s : objects){
-
+    Vector intersect_couleur(Ray& rayon){
+        Vector P,N;
+        double t = 2147483647;
+        Vector couleur = color;
+        for(Sphere& S : objects){
+            Vector P_current,N_current;
+            double t_current;
+            bool inter = S.intersect(rayon, P_current, N_current, t_current);
+            if (inter && t_current < t){
+                P = P_current;
+                N = N_current;
+                Vector PL;
+                PL = Lum.L-P;
+                couleur = Lum.I/(4*M_PI*PL.sqrNorm()) * std::max(0., dot(N, PL.get_normalized())) * S.rho/M_PI;
+                return couleur;
+            }
         }
     }
     std::vector<Sphere> objects;
     Light Lum;
+    Vector color;
 };
 
 int main() {
@@ -126,8 +141,10 @@ int main() {
     int r = 10;
     Sphere S(O, r, rho);
     double fov = 60 * M_PI/180;
-    double I = 1E7;
-    Vector L(-10,20,40);
+    Light Lum(double (1E7), Vector (-10, 20, 40));
+    Vector couleur(0, 0, 0);
+    //double I = 1E7;
+    //Vector L(-10,20,40);
 
 	std::vector<unsigned char> image(W*H * 3, 0);
 	for (int i = 0; i < H; i++) {
@@ -139,20 +156,20 @@ int main() {
             Vector P,N;
             double t;
             bool inter = S.intersect(rayon, P, N, t);
-            Vector couleur(0,0,0);
+            Vector coul = couleur;
             if (inter){
                 Vector PL;
-                PL = L-P;
-                couleur = I/(4*M_PI*PL.sqrNorm()) * std::max(0., dot(N, PL.get_normalized())) * rho/M_PI;
+                PL = Lum.L-P;
+                coul = Lum.I/(4*M_PI*PL.sqrNorm()) * std::max(0., dot(N, PL.get_normalized())) * S.rho/M_PI;
             }
 
-            image[( (H-i-1)*W + j) * 3 + 0] = couleur[0];
-            image[( (H-i-1)*W + j) * 3 + 1] = couleur[1];
-            image[( (H-i-1)*W + j) * 3 + 2] = couleur[2];
+            image[( (H-i-1)*W + j) * 3 + 0] = coul[0];
+            image[( (H-i-1)*W + j) * 3 + 1] = coul[1];
+            image[( (H-i-1)*W + j) * 3 + 2] = coul[2];
 
 		}
 	}
-	stbi_write_png("image.png", W, H, 3, &image[0], 0);
+	stbi_write_png("D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Image/image111.png", W, H, 3, &image[0], 0);
 
 	return 0;
 }
