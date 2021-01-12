@@ -1,4 +1,4 @@
-ï»¿#define _CRT_SECURE_NO_WARNINGS 1
+#define _CRT_SECURE_NO_WARNINGS 1
 #include <vector>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -60,27 +60,38 @@ public:
 	Vector u;
 };
 
+class SortieIntersect {
+public:
+	SortieIntersect(const bool intersect, Vector P, Vector N, double t) : intersect(intersect), P(P), N(N), t(t) {
+	}
+	bool intersect;
+	Vector P;
+	Vector N;
+	double t;
+};
+
 class Sphere {
 public:
 	Sphere(const Vector& O, double R, Vector rho) : O(O), R(R), rho(rho) {
 	}
-	bool intersect(const Ray& r, Vector& P, Vector& N, double& t) {
-		// pour rï¿½soudre a*t^2 + b*t + c = 0
+	SortieIntersect intersect(const Ray& r) {
+		// pour résoudre a*t^2 + b*t + c = 0
 		double a = 1;
 		double b = 2 * dot(r.u, r.C - O);
 		double c = (r.C - O).sqrNorm() - R * R;
 		double delta = b * b - 4 * a * c;
 		if (delta < 0) {
 			double t = 1E10;
-			return false;
+			bool bool_sortie(false);
 		}
 		else {
 			double sqrtDelta = sqrt(delta);
 			double t2 = (-b + sqrtDelta) / (2 * a);
 			if (t2 < 0) {
-				return false;
+				bool bool_sortie(false);
 			}
 
+			double t;
 			double t1 = (-b - sqrtDelta) / (2 * a);
 			if (t1 > 0) {
 				t = t1;
@@ -88,9 +99,11 @@ public:
 			else {
 				t = t2;
 			}
-			P = r.C + t * r.u;
-			N = (P - O).get_normalized();
-			return true;
+			Vector P = r.C + t * r.u;
+			Vector N = (P - O).get_normalized();
+			bool bool_sortie(true);
+			SortieIntersect sortie(bool_sortie, P, N, t);
+			return sortie;
 		}
 	}
 	Vector O;
@@ -111,19 +124,17 @@ public:
 	Scene(Light& Lum, Vector& color) : Lum(Lum), color(color) {
 	}
 	Vector intersect_couleur(Ray& rayon) {
-		/*if (rayon.u[0]< -0.4)
+		/*if (rayon.u[0]< -0.4) 
 			std::cout << "";*/
 		Vector P, N;
 		double t = 2147483647;
 		Vector couleur = color;
 		for (Sphere& S : objects) {
-			Vector P_current, N_current;
-			double t_current;
-			bool inter = S.intersect(rayon, P_current, N_current, t_current);
-			if (inter && (t_current < t)) {
-				P = P_current;
-				N = N_current;
-				t = t_current;
+			SortieIntersect sortie_inter = S.intersect(rayon);
+			if (sortie_inter.intersect && (sortie_inter.t < t)) {
+				P = sortie_inter.P;
+				N = sortie_inter.N;
+				t = sortie_inter.t;
 				Vector PL;
 				PL = Lum.L - P;
 				couleur = Lum.I / (4 * M_PI * PL.sqrNorm()) * std::max(0., dot(N, PL.get_normalized())) * S.rho / M_PI;
@@ -150,14 +161,14 @@ int main() {
 	Sphere SMurBas(Vector(0, -1000, 0), 990, Vector(0, 0, 1));
 
 	double fov = 60 * M_PI / 180;
-	Light Lum(double(1E7), Vector(-10, 20, 40));
+	Light Lum(double(5E7), Vector(-10, 20, 40));
 	Vector couleur(0, 0, 0);
 	Scene scene(Lum, couleur);
 	scene.objects.push_back(S1);
 	//scene.objects.push_back(S2);
 	//scene.objects.push_back(SMurBas);
 	scene.objects.push_back(SMurFace);
-	scene.objects.push_back(SMurDos);
+	//scene.objects.push_back(SMurDos);
 	scene.objects.push_back(SMurHaut);
 	scene.objects.push_back(SMurBas);
 
