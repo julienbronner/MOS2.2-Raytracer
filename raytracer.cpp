@@ -62,10 +62,10 @@ public:
 
 class Sphere {
 public:
-	Sphere(const Vector& O, double R, Vector rho) : O(O), R(R), rho(rho) {
+	Sphere(const Vector& O, double R, Vector rho, double diffuse) : O(O), R(R), rho(rho), diffuse(diffuse) {
 	}
 	bool intersect(const Ray& r, Vector& P, Vector& N, double& t) {
-		// pour r�soudre a*t^2 + b*t + c = 0
+		// pour resoudre a*t^2 + b*t + c = 0
 		double a = 1;
 		double b = 2 * dot(r.u, r.C - O);
 		double c = (r.C - O).sqrNorm() - R * R;
@@ -96,6 +96,7 @@ public:
 	Vector O;
 	double R;
 	Vector rho;
+	double diffuse;
 };
 
 class Light {
@@ -110,12 +111,11 @@ class Scene {
 public:
 	Scene(Light& Lum, Vector& color) : Lum(Lum), color(color) {
 	}
-	Vector intersect_couleur(Ray& rayon) {
-		/*if (rayon.u[0]< -0.4)
-			std::cout << "";*/
-		Vector P, N;
-		double t = 2147483647;
-		Vector couleur = color;
+	bool intersect_scene(const Ray& rayon, Vector& P, Vector& N, Vector& albedo, double& t, double& diffuse) {
+		//Vector P, N;
+		//double t = 2147483647;
+		//Vector couleur = color;
+		bool bool_sortie = false;
 		for (Sphere& S : objects) {
 			Vector P_current, N_current;
 			double t_current;
@@ -124,13 +124,41 @@ public:
 				P = P_current;
 				N = N_current;
 				t = t_current;
-				Vector PL;
-				PL = Lum.L - P;
-				couleur = Lum.I / (4 * M_PI * PL.sqrNorm()) * std::max(0., dot(N, PL.get_normalized())) * S.rho / M_PI;
+				albedo = S.rho;
+				diffuse = S.diffuse;
+				bool_sortie = true;
+				//Vector PL;
+				//PL = Lum.L - P;
+				//couleur = Lum.I / (4 * M_PI * PL.sqrNorm()) * std::max(0., dot(N, PL.get_normalized())) * S.rho / M_PI;
 			}
 		}
-		return couleur;
+		return bool_sortie;
 	}
+	Vector getColor(Ray& rayon) {
+		Vector coul = color;
+		Vector P, N, albedo;
+		double t = 2147483647;
+		double diffuse;
+		bool inter = intersect_scene(rayon, P, N, albedo, t, diffuse);
+		if (inter) {
+			Vector PL;
+			PL = Lum.L - P;
+			Vector shadowP, shadowN, shadowAlbedo;
+			double shadowt = 2147483647;
+			double shadowDiffuse;
+			double epsilon = 0.001;
+			Ray shadowRay(P + epsilon * PL.get_normalized(), PL.get_normalized());
+			bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowAlbedo, shadowt, shadowDiffuse);
+			if (shadowInter && shadowt < sqrt(PL.sqrNorm())) {
+				coul = Vector(0., 0., 0.);
+			}
+			else {
+				coul = Lum.I / (4 * M_PI * PL.sqrNorm()) * std::max(0., dot(N, PL.get_normalized())) * albedo / M_PI;
+			}
+		}
+		return coul;
+	}
+
 	std::vector<Sphere> objects;
 	Light Lum;
 	const Vector color;
@@ -142,24 +170,29 @@ int main() {
 
 	Vector C(0, 0, 55);
 	int r = 10;
-	Sphere S1(Vector(0, 0, 0), r, Vector(1, 0, 0));
+	Sphere S1(Vector(0, 0, 0), r, Vector(1, 0, 0), 0);
 	//Sphere S2(Vector(0, 10, 0), r, Vector(0, 1, 0));
-	Sphere SMurFace(Vector(0, 0, -1000), 940, Vector(0, 1, 0));
-	Sphere SMurDos(Vector(0, 0, 1000), 940, Vector(1, 0, 1));
-	Sphere SMurHaut(Vector(0, 1000, 0), 940, Vector(1, 0, 0));
-	Sphere SMurBas(Vector(0, -1000, 0), 990, Vector(0, 0, 1));
+	Sphere SMurFace(Vector(0, 0, -1000), 940, Vector(0, 1, 0), 0);
+	Sphere SMurDos(Vector(0, 0, 1000), 940, Vector(1, 0, 1), 0);
+	Sphere SMurHaut(Vector(0, 1000, 0), 940, Vector(1, 0, 0), 0);
+	Sphere SMurBas(Vector(0, -1000, 0), 990, Vector(0, 0, 1), 0);
+	Sphere SMurDroite(Vector(1000, 0, 0), 940, Vector(0, 1, 1), 0);
+	Sphere SMurGauche(Vector(-1000, 0, 0), 940, Vector(1, 1, 0), 0);
 
 	double fov = 60 * M_PI / 180;
 	Light Lum(double(4E9), Vector(-10, 20, 40));
 	Vector couleur(0, 0, 0);
 	Scene scene(Lum, couleur);
 	scene.objects.push_back(S1);
+	double gamma = 0.45;
 	//scene.objects.push_back(S2);
 	//scene.objects.push_back(SMurBas);
 	scene.objects.push_back(SMurFace);
 	scene.objects.push_back(SMurDos);
 	scene.objects.push_back(SMurHaut);
 	scene.objects.push_back(SMurBas);
+	scene.objects.push_back(SMurDroite);
+	scene.objects.push_back(SMurGauche);
 
 	std::vector<unsigned char> image(W * H * 3, 0);
 	for (int i = 0; i < H; i++) {
@@ -168,22 +201,12 @@ int main() {
 			Vector u(j - W / 2, i - H / 2, -W / (2 * tan(fov / 2)));
 			u = u.get_normalized();
 			Ray rayon(C, u);
-			Vector coul = couleur;
-			/*
-			Vector P, N;
-			double t;
-			bool inter = S1.intersect(rayon, P, N, t);
-			if (inter){
-				Vector PL;
-				PL = Lum.L-P;
-				coul = Lum.I/(4*M_PI*PL.sqrNorm()) * std::max(0., dot(N, PL.get_normalized())) * S1.rho/M_PI;
-			}
-			*/
-			coul = scene.intersect_couleur(rayon);
+			
+			Vector coul = scene.getColor(rayon);
 
-			image[((H - i - 1) * W + j) * 3 + 0] = std::min(255., std::pow(coul[0], 0.45) );
-			image[((H - i - 1) * W + j) * 3 + 1] = std::min(255., std::pow(coul[1], 0.45) );
-			image[((H - i - 1) * W + j) * 3 + 2] = std::min(255., std::pow(coul[2], 0.45) );
+			image[((H - i - 1) * W + j) * 3 + 0] = std::min(255., std::pow(coul[0], gamma) );
+			image[((H - i - 1) * W + j) * 3 + 1] = std::min(255., std::pow(coul[1], gamma) );
+			image[((H - i - 1) * W + j) * 3 + 2] = std::min(255., std::pow(coul[2], gamma) );
 
 		}
 	}

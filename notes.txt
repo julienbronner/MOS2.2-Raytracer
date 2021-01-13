@@ -41,3 +41,10 @@ dans main scene.objects.push_back(S1)
 On rajoute un puissance 0.45 (qui correspond a 1/gamme = 0.45, gamme = 2.2), a la fin, pour calculer la valeur du rendu
 Quand on intégrera un fichier en plus, il faudra les mettre à la puissance gamma car ils sont déjà corrigé gamma,
 donc il faut faire l'étape inverse pour compenser notre étape finale
+
+# Ombre porté
+
+Pour connaître l'ombre au sol, on renvoit un rayon depuis le point sur le sol vers la lumière 
+pour voir s'il y a une intersection avant la lumière
+On rajoute un epsilon au point de départ du rayon de Shadow, 
+sinon il y a des problemes de précisions (car on se trouve des fois d'un côté ou de l'autre du volume sur lequel on regarde)
