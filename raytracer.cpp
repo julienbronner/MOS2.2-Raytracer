@@ -11,6 +11,8 @@
 #include <math.h>
 #include <algorithm>
 
+#include <chrono>
+
 #include <iostream>
 
 class Vector {
@@ -62,7 +64,7 @@ public:
 
 class Sphere {
 public:
-	Sphere(const Vector& O, double R, Vector rho, double diffuse) : O(O), R(R), rho(rho), diffuse(diffuse) {
+	Sphere(const Vector& O, double R, Vector rho, bool diffuse) : O(O), R(R), rho(rho), diffuse(diffuse) {
 	}
 	bool intersect(const Ray& r, Vector& P, Vector& N, double& t) {
 		// pour resoudre a*t^2 + b*t + c = 0
@@ -96,7 +98,7 @@ public:
 	Vector O;
 	double R;
 	Vector rho;
-	double diffuse;
+	bool diffuse;
 };
 
 class Light {
@@ -111,7 +113,7 @@ class Scene {
 public:
 	Scene(Light& Lum, Vector& color) : Lum(Lum), color(color) {
 	}
-	bool intersect_scene(const Ray& rayon, Vector& P, Vector& N, Vector& albedo, double& t, double& diffuse) {
+	bool intersect_scene(const Ray& rayon, Vector& P, Vector& N, Vector& albedo, double& t, bool& diffuse) {
 		//Vector P, N;
 		//double t = 2147483647;
 		//Vector couleur = color;
@@ -134,27 +136,39 @@ public:
 		}
 		return bool_sortie;
 	}
-	Vector getColor(Ray& rayon) {
+	Vector getColor(Ray& rayon, const int& rebond) {
+
+		if (rebond > 5) return Vector(0., 0., 0.);
+
 		Vector coul = color;
 		Vector P, N, albedo;
 		double t = 2147483647;
-		double diffuse;
+		bool diffuse;
 		bool inter = intersect_scene(rayon, P, N, albedo, t, diffuse);
 		if (inter) {
 			Vector PL;
 			PL = Lum.L - P;
-			Vector shadowP, shadowN, shadowAlbedo;
-			double shadowt = 2147483647;
-			double shadowDiffuse;
 			double epsilon = 0.001;
-			Ray shadowRay(P + epsilon * PL.get_normalized(), PL.get_normalized());
-			bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowAlbedo, shadowt, shadowDiffuse);
-			if (shadowInter && shadowt < sqrt(PL.sqrNorm())) {
-				coul = Vector(0., 0., 0.);
+			if (diffuse) {
+				Vector reflex = rayon.u - 2 * dot(rayon.u, N) * N;
+				Ray rayon_reflechi(P + epsilon * reflex, reflex.get_normalized());
+				return getColor( rayon_reflechi, rebond + 1);
 			}
 			else {
-				coul = Lum.I / (4 * M_PI * PL.sqrNorm()) * std::max(0., dot(N, PL.get_normalized())) * albedo / M_PI;
+				Vector shadowP, shadowN, shadowAlbedo;
+				double shadowt = 2147483647;
+				bool shadowDiffuse;
+				Ray shadowRay(P + epsilon * PL.get_normalized(), PL.get_normalized());
+				bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowAlbedo, shadowt, shadowDiffuse);
+				if (shadowInter && shadowt < sqrt(PL.sqrNorm())) {
+					coul = Vector(0., 0., 0.);
+				}
+				else {
+					coul = Lum.I / (4 * M_PI * PL.sqrNorm()) * std::max(0., dot(N, PL.get_normalized())) * albedo / M_PI;
+				}
 			}
+
+
 		}
 		return coul;
 	}
@@ -165,28 +179,34 @@ public:
 };
 
 int main() {
+	//auto start = std::chrono::high_resolution_clock::now();
 	int W = 512;
 	int H = 512;
 
 	Vector C(0, 0, 55);
 	int r = 10;
-	Sphere S1(Vector(0, 0, 0), r, Vector(1, 0, 0), 0);
-	//Sphere S2(Vector(0, 10, 0), r, Vector(0, 1, 0));
-	Sphere SMurFace(Vector(0, 0, -1000), 940, Vector(0, 1, 0), 0);
-	Sphere SMurDos(Vector(0, 0, 1000), 940, Vector(1, 0, 1), 0);
-	Sphere SMurHaut(Vector(0, 1000, 0), 940, Vector(1, 0, 0), 0);
-	Sphere SMurBas(Vector(0, -1000, 0), 990, Vector(0, 0, 1), 0);
-	Sphere SMurDroite(Vector(1000, 0, 0), 940, Vector(0, 1, 1), 0);
-	Sphere SMurGauche(Vector(-1000, 0, 0), 940, Vector(1, 1, 0), 0);
+	//Sphere S1(Vector(0, 0, 0), r, Vector(1, 0, 0), true);
+	Sphere S1(Vector(-15, 0, 0), r, Vector(1, 0, 0), true);
+	Sphere S2(Vector(15, 0, 0), r, Vector(0, 1, 0), true);
+	Sphere S3(Vector(0, 15, 0), r, Vector(0, 0, 1), false);
+	Sphere S4(Vector(0, -15, 0), r, Vector(0, 1, 1), true);
+	Sphere SMurFace(Vector(0, 0, -1000), 940, Vector(0, 1, 0), false);
+	Sphere SMurDos(Vector(0, 0, 1000), 940, Vector(1, 0, 1), false);
+	Sphere SMurHaut(Vector(0, 1000, 0), 940, Vector(1, 0, 0), false);
+	Sphere SMurBas(Vector(0, -1000, 0), 990, Vector(0, 0, 1), false);
+	Sphere SMurDroite(Vector(1000, 0, 0), 940, Vector(0, 1, 1), false);
+	Sphere SMurGauche(Vector(-1000, 0, 0), 940, Vector(1, 1, 0), false);
 
 	double fov = 60 * M_PI / 180;
 	Light Lum(double(4E9), Vector(-10, 20, 40));
 	Vector couleur(0, 0, 0);
 	Scene scene(Lum, couleur);
 	scene.objects.push_back(S1);
+	scene.objects.push_back(S2);
+	scene.objects.push_back(S3);
+	scene.objects.push_back(S4);
 	double gamma = 0.45;
-	//scene.objects.push_back(S2);
-	//scene.objects.push_back(SMurBas);
+	
 	scene.objects.push_back(SMurFace);
 	scene.objects.push_back(SMurDos);
 	scene.objects.push_back(SMurHaut);
@@ -202,7 +222,7 @@ int main() {
 			u = u.get_normalized();
 			Ray rayon(C, u);
 			
-			Vector coul = scene.getColor(rayon);
+			Vector coul = scene.getColor(rayon, int(0));
 
 			image[((H - i - 1) * W + j) * 3 + 0] = std::min(255., std::pow(coul[0], gamma) );
 			image[((H - i - 1) * W + j) * 3 + 1] = std::min(255., std::pow(coul[1], gamma) );
