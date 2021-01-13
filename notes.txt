@@ -48,3 +48,18 @@ Pour connaître l'ombre au sol, on renvoit un rayon depuis le point sur le sol ve
 pour voir s'il y a une intersection avant la lumière
 On rajoute un epsilon au point de départ du rayon de Shadow, 
 sinon il y a des problemes de précisions (car on se trouve des fois d'un côté ou de l'autre du volume sur lequel on regarde)
+
+# Surface transparente
+
+n1*sin(theta1) = n2*sin(theta2)
+si i incident et t transmis
+sin(theta_t) = n1/n2 * sin(theta_i)
+donc composante tangentielle t_t = n1/n2* i_t (comp tangentielle de incident)
+d'ou t_t = n1/n2* (i - <i,N>*N)     avec N le vecteur normal
+
+composante normale t_N = -cos(theta_t)*N = -sqrt(1-sin²(theta_t))*N
+                                         = -sqrt(1- (n1/n2)²*sin²(theta_i))*N
+                                         = -sqrt(1- (n1/n2)²*(1-cos²(theta_i) ) )*N
+                                         = -sqrt(1- (n1/n2)²*(1- <i,N>² ) )*N
+Si truc sous la racine est négatif, on a une réflexion totale
+Bien faire attention a ce qu'est n1 et n2

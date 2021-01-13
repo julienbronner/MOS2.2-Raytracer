@@ -14,6 +14,7 @@
 #include <chrono>
 
 #include <iostream>
+#include <sstream>
 
 class Vector {
 public:
@@ -64,7 +65,7 @@ public:
 
 class Sphere {
 public:
-	Sphere(const Vector& O, double R, Vector rho, bool diffuse) : O(O), R(R), rho(rho), diffuse(diffuse) {
+	Sphere(const Vector& O, double R, Vector rho, bool mirror) : O(O), R(R), rho(rho), mirror(mirror) {
 	}
 	bool intersect(const Ray& r, Vector& P, Vector& N, double& t) {
 		// pour resoudre a*t^2 + b*t + c = 0
@@ -98,7 +99,7 @@ public:
 	Vector O;
 	double R;
 	Vector rho;
-	bool diffuse;
+	bool mirror;
 };
 
 class Light {
@@ -113,7 +114,7 @@ class Scene {
 public:
 	Scene(Light& Lum, Vector& color) : Lum(Lum), color(color) {
 	}
-	bool intersect_scene(const Ray& rayon, Vector& P, Vector& N, Vector& albedo, double& t, bool& diffuse) {
+	bool intersect_scene(const Ray& rayon, Vector& P, Vector& N, Vector& albedo, double& t, bool& mirror) {
 		//Vector P, N;
 		//double t = 2147483647;
 		//Vector couleur = color;
@@ -127,7 +128,7 @@ public:
 				N = N_current;
 				t = t_current;
 				albedo = S.rho;
-				diffuse = S.diffuse;
+				mirror = S.mirror;
 				bool_sortie = true;
 				//Vector PL;
 				//PL = Lum.L - P;
@@ -143,13 +144,13 @@ public:
 		Vector coul = color;
 		Vector P, N, albedo;
 		double t = 2147483647;
-		bool diffuse;
-		bool inter = intersect_scene(rayon, P, N, albedo, t, diffuse);
+		bool mirror;
+		bool inter = intersect_scene(rayon, P, N, albedo, t, mirror);
 		if (inter) {
 			Vector PL;
 			PL = Lum.L - P;
 			double epsilon = 0.001;
-			if (diffuse) {
+			if (mirror) {
 				Vector reflex = rayon.u - 2 * dot(rayon.u, N) * N;
 				Ray rayon_reflechi(P + epsilon * reflex, reflex.get_normalized());
 				return getColor( rayon_reflechi, rebond + 1);
@@ -157,9 +158,9 @@ public:
 			else {
 				Vector shadowP, shadowN, shadowAlbedo;
 				double shadowt = 2147483647;
-				bool shadowDiffuse;
+				bool shadowMirror;
 				Ray shadowRay(P + epsilon * PL.get_normalized(), PL.get_normalized());
-				bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowAlbedo, shadowt, shadowDiffuse);
+				bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowAlbedo, shadowt, shadowMirror);
 				if (shadowInter && shadowt < sqrt(PL.sqrNorm())) {
 					coul = Vector(0., 0., 0.);
 				}
@@ -179,17 +180,17 @@ public:
 };
 
 int main() {
-	//auto start = std::chrono::high_resolution_clock::now();
+	auto start = std::chrono::high_resolution_clock::now();
 	int W = 512;
 	int H = 512;
 
 	Vector C(0, 0, 55);
 	int r = 10;
-	//Sphere S1(Vector(0, 0, 0), r, Vector(1, 0, 0), true);
-	Sphere S1(Vector(-15, 0, 0), r, Vector(1, 0, 0), true);
-	Sphere S2(Vector(15, 0, 0), r, Vector(0, 1, 0), true);
-	Sphere S3(Vector(0, 15, 0), r, Vector(0, 0, 1), false);
-	Sphere S4(Vector(0, -15, 0), r, Vector(0, 1, 1), true);
+	Sphere S1(Vector(0, 0, 0), r, Vector(1, 0, 0), true);
+	//Sphere S1(Vector(-15, 0, 0), r, Vector(1, 0, 0), true);
+	//Sphere S2(Vector(15, 0, 0), r, Vector(0, 1, 0), true);
+	//Sphere S3(Vector(0, 15, 0), r, Vector(0, 0, 1), false);
+	//Sphere S4(Vector(0, -15, 0), r, Vector(0, 1, 1), true);
 	Sphere SMurFace(Vector(0, 0, -1000), 940, Vector(0, 1, 0), false);
 	Sphere SMurDos(Vector(0, 0, 1000), 940, Vector(1, 0, 1), false);
 	Sphere SMurHaut(Vector(0, 1000, 0), 940, Vector(1, 0, 0), false);
@@ -202,9 +203,9 @@ int main() {
 	Vector couleur(0, 0, 0);
 	Scene scene(Lum, couleur);
 	scene.objects.push_back(S1);
-	scene.objects.push_back(S2);
-	scene.objects.push_back(S3);
-	scene.objects.push_back(S4);
+	//scene.objects.push_back(S2);
+	//scene.objects.push_back(S3);
+	//scene.objects.push_back(S4);
 	double gamma = 0.45;
 	
 	scene.objects.push_back(SMurFace);
@@ -230,8 +231,19 @@ int main() {
 
 		}
 	}
+	auto end = std::chrono::high_resolution_clock::now();
+	auto diff = end - start;
+	auto diff_sec = std::chrono::duration_cast<std::chrono::milliseconds>(diff);
+	std::ostringstream out;
 	std::string Path = "D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Image/";
-	stbi_write_png("D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Image/image111.png", W, H, 3, &image[0], 0);
+	out << Path << "new_test-" << diff_sec.count() << "ms.png";
+	std::string location = out.str();
+	char* cname;
+	cname = &location[0];
+	stbi_write_png(cname, W, H, 3, &image[0], 0);
+	std::cout << "La calcul a duré : " << diff_sec.count() << " millisecondes" << std::endl;
+	//std::string Path = "D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Image/";
+	//stbi_write_png("D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Image/image111.png", W, H, 3, &image[0], 0);
 
 	return 0;
 }
