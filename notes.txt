@@ -1,3 +1,7 @@
+# Rapport 
+
+5-6 pages, images de résultats, timing pour les rendus
+
 # Faire la sphere
 
 equation t² + 2*t*<u,C-O> + ||C-O||² - R² = 0
@@ -50,6 +54,8 @@ On rajoute un epsilon au point de départ du rayon de Shadow,
 sinon il y a des problemes de précisions (car on se trouve des fois d'un côté ou de l'autre du volume sur lequel on regarde)
 
 # Surface transparente
+
+Point d'amélioration : n en paramètre de la sphère
 
 n1*sin(theta1) = n2*sin(theta2)
 si i incident et t transmis
