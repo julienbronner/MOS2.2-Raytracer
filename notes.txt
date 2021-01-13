@@ -35,3 +35,9 @@ class Scene{
 
 }
 dans main scene.objects.push_back(S1)
+
+# Correction gamma
+
+On rajoute un puissance 0.45 (qui correspond a 1/gamme = 0.45, gamme = 2.2), a la fin, pour calculer la valeur du rendu
+Quand on intégrera un fichier en plus, il faudra les mettre à la puissance gamma car ils sont déjà corrigé gamma,
+donc il faut faire l'étape inverse pour compenser notre étape finale

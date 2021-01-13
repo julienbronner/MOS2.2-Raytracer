@@ -150,7 +150,7 @@ int main() {
 	Sphere SMurBas(Vector(0, -1000, 0), 990, Vector(0, 0, 1));
 
 	double fov = 60 * M_PI / 180;
-	Light Lum(double(1E7), Vector(-10, 20, 40));
+	Light Lum(double(4E9), Vector(-10, 20, 40));
 	Vector couleur(0, 0, 0);
 	Scene scene(Lum, couleur);
 	scene.objects.push_back(S1);
@@ -181,9 +181,9 @@ int main() {
 			*/
 			coul = scene.intersect_couleur(rayon);
 
-			image[((H - i - 1) * W + j) * 3 + 0] = std::min(255., coul[0]);
-			image[((H - i - 1) * W + j) * 3 + 1] = std::min(255., coul[1]);
-			image[((H - i - 1) * W + j) * 3 + 2] = std::min(255., coul[2]);
+			image[((H - i - 1) * W + j) * 3 + 0] = std::min(255., std::pow(coul[0], 0.45) );
+			image[((H - i - 1) * W + j) * 3 + 1] = std::min(255., std::pow(coul[1], 0.45) );
+			image[((H - i - 1) * W + j) * 3 + 2] = std::min(255., std::pow(coul[2], 0.45) );
 
 		}
 	}
