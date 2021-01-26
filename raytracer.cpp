@@ -71,7 +71,7 @@ public:
 
 class Sphere {
 public:
-	Sphere(const Vector& O, double R, Vector rho, bool mirror, bool transparency, bool sphere_inverse) : O(O), R(R), rho(rho), mirror(mirror), transparency(transparency), sphere_inverse(sphere_inverse){
+	Sphere(const Vector& O, double R, Vector rho, double n_refraction, bool mirror, bool transparency, bool sphere_inverse) : O(O), R(R), rho(rho), n_refraction(n_refraction), mirror(mirror), transparency(transparency), sphere_inverse(sphere_inverse){
 	}
 	bool intersect(const Ray& r, Vector& P, Vector& N, double& t) {
 		// pour resoudre a*t^2 + b*t + c = 0
@@ -106,7 +106,7 @@ public:
 		}
 	}
 	Vector O;
-	double R;
+	double R, n_refraction;
 	Vector rho;
 	bool mirror, transparency, sphere_inverse;
 };
@@ -121,9 +121,9 @@ public:
 
 class Scene {
 public:
-	Scene(Light& Lum, Vector& color) : Lum(Lum), color(color) {
+	Scene(Light& Lum, Vector& color, double n_refrac_scene) : Lum(Lum), color(color), n_refrac_scene(n_refrac_scene) {
 	}
-	bool intersect_scene(const Ray& rayon, Vector& P, Vector& N, Vector& albedo, double& t, bool& mirror, bool& transparency) {
+	bool intersect_scene(const Ray& rayon, Vector& P, Vector& N, Vector& albedo, double& t, double& n_refraction, bool& mirror, bool& transparency) {
 		//Vector P, N;
 		//double t = 2147483647;
 		//Vector couleur = color;
@@ -137,6 +137,7 @@ public:
 				N = N_current;
 				t = t_current;
 				albedo = S.rho;
+				n_refraction = S.n_refraction;
 				mirror = S.mirror;
 				transparency = S.transparency;
 				bool_sortie = true;
@@ -154,8 +155,9 @@ public:
 		Vector coul = color;
 		Vector P, N, albedo;
 		double t = 2147483647;
+		double n_refraction;
 		bool mirror, transparency;
-		bool inter = intersect_scene(rayon, P, N, albedo, t, mirror, transparency);
+		bool inter = intersect_scene(rayon, P, N, albedo, t, n_refraction, mirror, transparency);
 		if (inter) {
 			Vector PL;
 			PL = Lum.L - P;
@@ -167,7 +169,7 @@ public:
 			}
 			else {
 				if (transparency) {
-					double n1 = 1, n2 = 1.4;
+					double n1 = n_refrac_scene, n2 = n_refraction;
 					Vector N2 = N;
 					if (dot(rayon.u, N) > 0) {
 						std::swap(n1, n2);
@@ -189,9 +191,10 @@ public:
 				else {
 					Vector shadowP, shadowN, shadowAlbedo;
 					double shadowt = 2147483647;
+					double shadow_nRefraction;
 					bool shadowMirror, shadowTransparency;
 					Ray shadowRay(P + epsilon * PL.get_normalized(), PL.get_normalized());
-					bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowAlbedo, shadowt, shadowMirror, shadowTransparency);
+					bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowAlbedo, shadowt, shadow_nRefraction, shadowMirror, shadowTransparency);
 					if (shadowInter && shadowt < sqrt(PL.sqrNorm())) {
 						coul = Vector(0., 0., 0.);
 					}
@@ -207,6 +210,7 @@ public:
 	std::vector<Sphere> objects;
 	Light Lum;
 	const Vector color;
+	double n_refrac_scene;
 };
 
 int main() {
@@ -216,21 +220,21 @@ int main() {
 
 	Vector C(0, 0, 55);
 	int r = 10;
-	Sphere S1(Vector(-20, 0, 0), r, Vector(1, 0, 0), true, false, false);
-	Sphere S2(Vector(0, 0, 0), r, Vector(1, 0, 0), false, true, false);
-	Sphere S3(Vector(20, 0, 0), r, Vector(0, 0, 1), false, true, false);
-	Sphere S4(Vector(20, -0, 0), 9.5, Vector(0, 1, 1), false, true, true);
-	Sphere SMurFace(Vector(0, 0, -1000), 940, Vector(0, 1, 0), false, false, false);
-	Sphere SMurDos(Vector(0, 0, 1000), 940, Vector(1, 0, 1), false, false, false);
-	Sphere SMurHaut(Vector(0, 1000, 0), 940, Vector(1, 0, 0), false, false, false);
-	Sphere SMurBas(Vector(0, -1000, 0), 990, Vector(0, 0, 1), false, false, false);
-	Sphere SMurDroite(Vector(1000, 0, 0), 940, Vector(0, 1, 1), false, false, false);
-	Sphere SMurGauche(Vector(-1000, 0, 0), 940, Vector(1, 1, 0), false, false, false);
+	Sphere S1(Vector(-20, 0, 0), r, Vector(1, 0, 0), 1.4, true, false, false);
+	Sphere S2(Vector(0, 0, 0), r, Vector(1, 0, 0), 1.4, false, true, false);
+	Sphere S3(Vector(20, 0, 0), r, Vector(0, 0, 1), 1.4, false, true, false);
+	Sphere S4(Vector(20, -0, 0), 9.5, Vector(0, 1, 1), 1.4, false, true, true);
+	Sphere SMurFace(Vector(0, 0, -1000), 940, Vector(0, 1, 0), 1.4, false, false, false);
+	Sphere SMurDos(Vector(0, 0, 1000), 940, Vector(1, 0, 1), 1.4, false, false, false);
+	Sphere SMurHaut(Vector(0, 1000, 0), 940, Vector(1, 0, 0), 1.4, false, false, false);
+	Sphere SMurBas(Vector(0, -1000, 0), 990, Vector(0, 0, 1), 1.4, false, false, false);
+	Sphere SMurDroite(Vector(1000, 0, 0), 940, Vector(0, 1, 1), 1.4, false, false, false);
+	Sphere SMurGauche(Vector(-1000, 0, 0), 940, Vector(1, 1, 0), 1.4, false, false, false);
 
 	double fov = 60 * M_PI / 180;
 	Light Lum(double(4E9), Vector(-10, 20, 40));
 	Vector couleur(0, 0, 0);
-	Scene scene(Lum, couleur);
+	Scene scene(Lum, couleur, 1.);
 	scene.objects.push_back(S1);
 	scene.objects.push_back(S2);
 	scene.objects.push_back(S3);
