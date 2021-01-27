@@ -252,7 +252,7 @@ public:
 
 					// eclairage indirect
 					Vector random_vector = random_cos(N);
-					Ray rayon_indirect(P + epsilon * random_vector, random_vector);
+					Ray rayon_indirect(P + epsilon * random_vector, random_vector.get_normalized());
 					coul += albedo * getColor(rayon_indirect, rebond + 1);
 				}
 			}
@@ -358,15 +358,21 @@ int main() {
 
 		for (int j = 0; j < W; j++) {
 
-			Vector u(j - W / 2, i - H / 2, -W / (2 * tan(fov / 2)));
-			u = u.get_normalized();
-			Ray rayon(C, u);
+			Vector coul = scene.color;
+
+
 			//Vector coul = scene.getColor(rayon, int(0));
 			//Vector coul = (scene.getColor(rayon, int(0)) + scene.getColor(rayon, int(0)))/2;
 
-			
-			Vector coul = Vector(0.,0.,0.);
 			for(int k=0; k<nb_ray; k++){
+				double u1 = uniform(engine);
+				double u2 = uniform(engine);
+				double x = sqrt(1 - u1) * cos(2 * M_PI * u2);
+				double y = sqrt(1 - u1) * sin(2 * M_PI * u2);
+
+				Vector u(j - W / 2 + x, i - H / 2 + y, -W / (2 * tan(fov / 2)));
+				u = u.get_normalized();
+				Ray rayon(C, u);
 				coul += scene.getColor(rayon, int(0));
 			}
 			coul = coul / nb_ray;
