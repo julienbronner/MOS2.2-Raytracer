@@ -350,8 +350,10 @@ int main() {
 	scene.objects.push_back(SMurDroite);
 	scene.objects.push_back(SMurGauche);
 
+	int nb_ray = 100;
+
 	std::vector<unsigned char> image(W * H * 3, 0);
-	//#pragma omp parallel for schedule(dynamic,1)
+	#pragma omp parallel for schedule(dynamic,1)
 	for (int i = 0; i < H; i++) {
 
 		for (int j = 0; j < W; j++) {
@@ -362,7 +364,7 @@ int main() {
 			//Vector coul = scene.getColor(rayon, int(0));
 			//Vector coul = (scene.getColor(rayon, int(0)) + scene.getColor(rayon, int(0)))/2;
 
-			int nb_ray = 20;
+			
 			Vector coul = Vector(0.,0.,0.);
 			for(int k=0; k<nb_ray; k++){
 				coul += scene.getColor(rayon, int(0));
@@ -380,7 +382,7 @@ int main() {
 	auto diff_sec = std::chrono::duration_cast<std::chrono::milliseconds>(diff);
 	std::ostringstream out;
 	std::string Path = "D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Image/";
-	out << Path << "new_test-" << diff_sec.count() << "ms.png";
+	out << Path << "new_test-" << nb_ray <<"_rayons-" << diff_sec.count() << "ms.png";
 	std::string location = out.str();
 	char* cname;
 	cname = &location[0];
