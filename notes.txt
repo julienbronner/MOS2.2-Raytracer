@@ -69,3 +69,44 @@ composante normale t_N = -cos(theta_t)*N = -sqrt(1-sin²(theta_t))*N
                                          = -sqrt(1- (n1/n2)²*(1- <i,N>² ) )*N
 Si truc sous la racine est négatif, on a une réflexion totale
 Bien faire attention a ce qu'est n1 et n2
+
+# Eclairage indirect
+
+## Estimation d'intégrale
+Estimation d'intégrale problématique avec méthode habituelle (rectangle, trapeze, etc.)
+A la place, faire avec une methode aléatoire (type Monte-Carlo)
+
+Faire calcul avec une gaussienne de l'intégrale de cos^10 sur [-pi/2;pi/2]
+Pour générer une gaussienne Box-Muller : u1 et u2 qui suivent une loi uniforme [0,1]
+x1 = sqrt(-2*ln(u2))*cos(2*pi*u1)
+x2 = sqrt(-2*ln(u2))*sin(2*pi*u1)
+et x1, x2 suivent deux lois gaussiennes indépendantes, de moyenne nulle et ecart type 1
+Pour avoir un écart type non nul on fait x1 = sigma * sqrt(-2*ln(u2))*cos(2*pi*u1) et x2 = sigma * sqrt(-2*ln(u2))*sin(2*pi*u1)
+Pour un ecart type de 0.25 (ou 0.3 c'est même mieux) on a la gaussienne très proche de cos^10
+
+## Calcul 
+
+L(w_o) = E(w_o) + integrale( sur demi-sphere, f(w_i, w_o)* L(w_i)*<N, w_i> dw_i )       # cos(O_i) = <N, w_i> 
+
+f c'est la BRDF
+f(w_i, w_o) = rho/pi dans le cas diffu 
+
+Propriété de f :
+    f > 0
+    f(w_i, w_o) = f(w_o, w_i) --> si on inverse les rayons, on a la même chose
+    integrale( f(w_i, w_o) * <N, w_i> dw_i) <=1     pour tout w_o
+
+Dans le calcul de L(w_o), on a f(w_i,w_o) qui est constant, on a L(w_i) qu'on a recursivement
+donc on veut p(w_i) proportionnel à <N, w_i>
+
+p(w_i) = <N, w_i>/pi
+
+d'ou l'integrale de la somme dans L(w_o) ~= rho * getColor(w) avec w une direction aléatoire
+et direction aleatoire qui est calculé par 
+    x = cos(2*pi*r1) * sqrt(1-r2)
+    y = sin(2*pi*r1) * sqrt(1-r2)
+    z =sqrt(r2)
+
+# Anti aliasing
+
+par rapport au screen, rajouter 0.5 pour chaque composante pour centrer
