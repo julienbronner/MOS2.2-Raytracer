@@ -321,10 +321,10 @@ int main() {
 	Vector C(0, 0, 55);
 	int r = 10;
 	Sphere S0(Vector(0, 0, 0), r, Vector(1, 1, 1), 1.4, false, false, false);
-	Sphere S1(Vector(-20, 0, 0), r, Vector(1, 0, 0), 1.4, true, false, false);
-	Sphere S2(Vector(0, 0, 0), r, Vector(1, 0, 0), 1.4, false, true, false);
-	Sphere S3(Vector(20, 0, 0), r, Vector(0, 0, 1), 1.4, false, true, false);
-	Sphere S4(Vector(20, -0, 0), 9.5, Vector(0, 1, 1), 1.4, false, true, true);
+	Sphere S_miroir_gauche(Vector(-20, 0, 0), r, Vector(1, 0, 0), 1.4, true, false, false);
+	Sphere S_transparente_centre(Vector(0, 0, 0), r, Vector(1, 0, 0), 1.4, false, true, false);
+	Sphere S_creuse_exterieur_droite(Vector(20, 0, 0), r, Vector(0, 0, 1), 1.4, false, true, false);
+	Sphere S_creuse_interieur_droite(Vector(20, -0, 0), 9.5, Vector(0, 1, 1), 1.4, false, true, true);
 	Sphere SMurFace(Vector(0, 0, -1000), 940, Vector(0, 1, 0), 1.4, false, false, false);
 	Sphere SMurDos(Vector(0, 0, 1000), 940, Vector(1, 0, 1), 1.4, false, false, false);
 	Sphere SMurHaut(Vector(0, 1000, 0), 940, Vector(1, 0, 0), 1.4, false, false, false);
@@ -336,11 +336,11 @@ int main() {
 	Light Lum(double(4E9), Vector(-10, 20, 40));
 	Vector couleur(0, 0, 0);
 	Scene scene(Lum, couleur, 1.);
-	scene.objects.push_back(S0);
-	//scene.objects.push_back(S1);
-	//scene.objects.push_back(S2);
-	//scene.objects.push_back(S3);
-	//scene.objects.push_back(S4);
+	//scene.objects.push_back(S0);
+	scene.objects.push_back(S_miroir_gauche);
+	scene.objects.push_back(S_transparente_centre);
+	scene.objects.push_back(S_creuse_exterieur_droite);
+	scene.objects.push_back(S_creuse_interieur_droite);
 	double gamma = 0.45;
 	
 	scene.objects.push_back(SMurFace);
@@ -350,7 +350,7 @@ int main() {
 	scene.objects.push_back(SMurDroite);
 	scene.objects.push_back(SMurGauche);
 
-	int nb_ray = 100;
+	int nb_ray = 20;
 
 	std::vector<unsigned char> image(W * H * 3, 0);
 	#pragma omp parallel for schedule(dynamic,1)
