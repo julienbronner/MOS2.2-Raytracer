@@ -114,3 +114,9 @@ par rapport au screen, rajouter 0.5 pour chaque composante pour centrer (au fina
 # Surface emissive (lumière avec une dimension)
 Images 12-13
 on passe d'une emission en I/(4*PI) à I/(4*PI*R²) avec R le rayon de la sphere lumineuse
+
+# Modéliser la caméra
+
+L'origine de la caméra n'est pas un point, mais une surface : on prend donc aléatoirement un point de cette surface aléatoirement
+comme origine. Normalement la surface c'est une hexagone, mais on peut prendre un cercle pour simplifier
+ou même un obturateur gaussien

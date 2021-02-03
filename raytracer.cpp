@@ -375,22 +375,25 @@ int main() {
 	int r = 10;
 
 	Sphere SLum(scene.Lum.L, 5, Vector(1, 1, 1), 1.4, false, false, false);
-	Sphere S0(Vector(0, 0, 0), r, Vector(1, 1, 1), 1.4, true, false, false);
-	Sphere S1(Vector(0, 2, 25), r, Vector(1, 0, 0), 1.4, false, true, false);
+	Sphere S0(Vector(20, 0, 15), r, Vector(1, 1, 1), 1.4, false, false, false);
+	Sphere S1(Vector(0, 0, 0), r, Vector(1, 1, 1), 1.4, false, false, false);
+	Sphere S2(Vector(-20, 0, -15), r, Vector(1, 1, 1), 1.4, false, false, false);
 	Sphere S_miroir_gauche(Vector(-20, 0, 0), r, Vector(1, 0, 0), 1.4, true, false, false);
 	Sphere S_transparente_centre(Vector(0, 0, 0), r, Vector(1, 0, 0), 1.4, false, true, false);
 	Sphere S_creuse_exterieur_droite(Vector(20, 0, 0), r, Vector(0, 0, 1), 1.4, false, true, false);
 	Sphere S_creuse_interieur_droite(Vector(20, -0, 0), 9.5, Vector(0, 1, 1), 1.4, false, true, true);
-	Sphere SMurFace(Vector(0, 0, -1000), 940, Vector(0, 1, 0), 1.4, false, false, false);
-	Sphere SMurDos(Vector(0, 0, 1000), 940, Vector(1, 0, 1), 1.4, false, false, false);
-	Sphere SMurHaut(Vector(0, 1000, 0), 940, Vector(1, 0, 0), 1.4, false, false, false);
-	Sphere SMurBas(Vector(0, -1000, 0), 990, Vector(0, 0, 1), 1.4, false, false, false);
-	Sphere SMurDroite(Vector(1000, 0, 0), 940, Vector(0, 1, 1), 1.4, false, false, false);
-	Sphere SMurGauche(Vector(-1000, 0, 0), 940, Vector(1, 1, 0), 1.4, false, false, false);
+	Sphere SMurFace(Vector(0, 0, -1000), 940, Vector(0, 0.5, 0), 1.4, false, false, false);
+	Sphere SMurDos(Vector(0, 0, 1000), 940, Vector(0.5, 0, 0.5), 1.4, false, false, false);
+	Sphere SMurHaut(Vector(0, 1000, 0), 940, Vector(0.5, 0, 0), 1.4, false, false, false);
+	Sphere SMurBas(Vector(0, -1000, 0), 990, Vector(0, 0, 0.5), 1.4, false, false, false);
+	Sphere SMurDroite(Vector(1000, 0, 0), 940, Vector(0, 0.5, 0.5), 1.4, false, false, false);
+	Sphere SMurGauche(Vector(-1000, 0, 0), 940, Vector(0.5, 0.5, 0), 1.4, false, false, false);
 
 	double fov = 60 * M_PI / 180;
 	scene.objects.push_back(SLum);
 	scene.objects.push_back(S0);
+	scene.objects.push_back(S1);
+	scene.objects.push_back(S2);
 	//scene.objects.push_back(S_miroir_gauche);
 	//scene.objects.push_back(S_transparente_centre);
 	//scene.objects.push_back(S_creuse_exterieur_droite);
@@ -423,9 +426,19 @@ int main() {
 				double x = sqrt(1 - u1) * cos(2 * M_PI * u2);
 				double y = sqrt(1 - u1) * sin(2 * M_PI * u2);
 
+				double u3 = uniform(engine);
+				double u4 = uniform(engine);
+				double x_capteur = sqrt(1 - u3) * cos(2 * M_PI * u4);
+				double y_capteur = sqrt(1 - u3) * sin(2 * M_PI * u4);
+
 				Vector u(j - W / 2 + x, i - H / 2 + y, -W / (2 * tan(fov / 2)));
 				u = u.get_normalized();
-				Ray rayon(C, u);
+
+				Vector cible = C + 55 * u;
+				Vector Cprime = C + Vector(x_capteur, y_capteur, 0);
+				Vector uprime = (cible - Cprime).get_normalized();
+
+				Ray rayon(Cprime, uprime);
 				bool lastDiffuse = false;
 				coul += scene.getColor(rayon, int(0), lastDiffuse);
 			}
