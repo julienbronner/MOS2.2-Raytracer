@@ -108,9 +108,9 @@ et direction aleatoire qui est calculé par
     z =sqrt(r2)
 
 # Anti aliasing
-
+Images 11
 par rapport au screen, rajouter 0.5 pour chaque composante pour centrer (au final pas fait, parce que ps sur que ce soit bon)
 
 # Surface emissive (lumière avec une dimension)
-
+Images 12-13
 on passe d'une emission en I/(4*PI) à I/(4*PI*R²) avec R le rayon de la sphere lumineuse

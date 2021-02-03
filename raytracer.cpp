@@ -58,6 +58,9 @@ Vector operator-(const Vector& b) {
 Vector operator*(double a, const Vector& b) {
 	return Vector(a * b[0], a * b[1], a * b[2]);
 }
+Vector operator*(const Vector& b, double a) {
+	return Vector(a * b[0], a * b[1], a * b[2]);
+}
 Vector operator/(const Vector& b, double a) {
 	return Vector(b[0] / a, b[1] / a, b[2] / a);
 }
@@ -91,6 +94,7 @@ Vector random_cos(const Vector& N) {
 	else {
 		T1 = Vector(-N[1], N[0], 0);
 	}
+	T1 = T1.get_normalized();
 	Vector T2 = cross(N, T1);
 	//return z * N + x * T1 + y * T2;
 	return z * N - x * T1 - y * T2;
@@ -112,7 +116,7 @@ class Sphere { // Définition d'une sphere
 	* ou si c'est une sphere inversée pour pouvoir définir une sphere creuse
 	*/
 public:
-	Sphere(const Vector& O, double R, Vector rho, double n_refraction, bool emissive, bool mirror, bool transparency, bool sphere_inverse) : O(O), R(R), rho(rho), n_refraction(n_refraction), emissive(emissive), mirror(mirror), transparency(transparency), sphere_inverse(sphere_inverse){
+	Sphere(const Vector& O, double R, Vector rho, double n_refraction, bool mirror, bool transparency, bool sphere_inverse) : O(O), R(R), rho(rho), n_refraction(n_refraction), mirror(mirror), transparency(transparency), sphere_inverse(sphere_inverse){
 	}
 	bool intersect(const Ray& r, Vector& P, Vector& N, double& t) {
 		// pour resoudre a*t^2 + b*t + c = 0
@@ -149,7 +153,7 @@ public:
 	Vector O;
 	double R, n_refraction;
 	Vector rho;
-	bool emissive, mirror, transparency, sphere_inverse;
+	bool mirror, transparency, sphere_inverse;
 };
 
 class Light { // Lumière qui à une puissance I et une position L
@@ -214,7 +218,7 @@ public:
 		}
 		return bool_sortie;
 	}
-	Vector getColor(Ray& rayon, const int& rebond) {
+	Vector getColor(Ray& rayon, const int& rebond, bool lastDiffuse) {
 
 		if (rebond > 10) return Vector(0., 0., 0.);
 
@@ -228,7 +232,13 @@ public:
 		if (inter) {
 
 			if (objectId == 0) {
-				return Vector(Lum.I, Lum.I, Lum.I) / (4 * M_PI * M_PI * R_sphere * R_sphere);
+				if (rebond == 0 || !lastDiffuse) {
+					return Vector(Lum.I, Lum.I, Lum.I) / (4 * M_PI * M_PI * objects[objectId].R * objects[objectId].R);
+				}
+
+				else {
+					return Vector(0., 0., 0.);
+				}
 			}
 			else {
 				Vector PL;
@@ -238,13 +248,15 @@ public:
 					// cas d'une sphere miroir
 					Vector reflex = rayon.u - 2 * dot(rayon.u, N) * N;
 					Ray rayon_reflechi(P + epsilon * reflex, reflex.get_normalized());
-					return getColor(rayon_reflechi, rebond + 1);
+					
+					return getColor(rayon_reflechi, rebond + 1, false);
 				}
 				else {
 					if (transparency) {
 						// cas d'une sphere transparente
 						double n1 = n_refrac_scene, n2 = n_refraction;
 						Vector N2 = N;
+				
 						if (dot(rayon.u, N) > 0) {
 							std::swap(n1, n2);
 							N2 = -N;
@@ -254,34 +266,42 @@ public:
 						if (radical < 0) {
 							Vector reflex = rayon.u - 2 * dot(rayon.u, N2) * N2;
 							Ray rayon_reflechi(P + epsilon * N2, reflex.get_normalized());
-							return getColor(rayon_reflechi, rebond + 1);
+							return getColor(rayon_reflechi, rebond + 1, false);
 						}
 						Vector t_n = -sqrt(radical) * N2;
 						Vector vect_dir_refracte = t_t + t_n;
 						Ray rayon_refracte(P - epsilon * N2, vect_dir_refracte);
-						return getColor(rayon_refracte, rebond + 1);
+						return getColor(rayon_refracte, rebond + 1, false);
 
 					}
 					else {
-						// eclairage direct
-						/*Vector shadowP, shadowN, shadowAlbedo;
+						PL = PL.get_normalized();
+						Vector w = random_cos(-PL); // on veut LP
+						Vector xprime = w * objects[0].R + objects[0].O;
+						Vector Pxprime = xprime - P;
+						double d = sqrt(Pxprime.sqrNorm()); 
+						Pxprime = Pxprime / d;
+
+						Vector shadowP, shadowN, shadowAlbedo;
+						int shadow_objectId;
 						double shadowt = 2147483647;
 						double shadow_nRefraction, shadow_R_Sphere;
-						bool shadowEmissive, shadowMirror, shadowTransparency;
-						Ray shadowRay(P + epsilon * PL.get_normalized(), PL.get_normalized());
-						bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowAlbedo, shadowt, shadow_nRefraction, shadowEmissive, shadowMirror, shadowTransparency, shadow_R_Sphere);
-						if (shadowInter && shadowt < sqrt(PL.sqrNorm())) {
+						bool shadowMirror, shadowTransparency;
+						Ray shadowRay(P + epsilon * N, Pxprime);
+						bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowAlbedo, shadowt, shadow_nRefraction, shadowMirror, shadowTransparency, shadow_R_Sphere, shadow_objectId);
+						if (shadowInter && shadowt < d-epsilon*10) {
 							coul = Vector(0., 0., 0.);
 						}
 						else {
-							coul = Lum.I / (4 * M_PI * PL.sqrNorm()) * std::max(0., dot(N, PL.get_normalized())) * albedo / M_PI;
-						}*/
+							double proba = std::max(0. ,dot(-PL, w)) / (M_PI*objects[0].R * objects[0].R);
+							double J = std::max(0., dot(w, -Pxprime))/(d*d);
+							coul = Lum.I / (4 * M_PI * objects[0].R * objects[0].R) * std::max(0., dot(N, Pxprime)) * albedo / M_PI * J / proba;
+						}
 
 						// eclairage indirect
-						coul = Vector(0., 0., 0.);
 						Vector random_vector = random_cos(N);
 						Ray rayon_indirect(P + epsilon * random_vector, random_vector.get_normalized());
-						coul += albedo * getColor(rayon_indirect, rebond + 1);
+						coul += albedo * getColor(rayon_indirect, rebond + 1, true);
 					}
 				}
 			}
@@ -347,26 +367,28 @@ int main() {
 	int W = 512;
 	int H = 512;
 
-	Vector C(0, 0, 55);
-	int r = 10;
-
-	Sphere SLum(Vector(-10, 20, 40), 5, Vector(1, 1, 1), 1.4, false, false, false, false);
-	Sphere S0(Vector(0, 0, 0), r, Vector(1, 1, 1), 1.4, false, false, false, false);
-	Sphere S_miroir_gauche(Vector(-20, 0, 0), r, Vector(1, 0, 0), 1.4, false, true, false, false);
-	Sphere S_transparente_centre(Vector(0, 0, 0), r, Vector(1, 0, 0), 1.4, false, false, true, false);
-	Sphere S_creuse_exterieur_droite(Vector(20, 0, 0), r, Vector(0, 0, 1), 1.4, false, false, true, false);
-	Sphere S_creuse_interieur_droite(Vector(20, -0, 0), 9.5, Vector(0, 1, 1), 1.4, false, false, true, true);
-	Sphere SMurFace(Vector(0, 0, -1000), 940, Vector(0, 1, 0), 1.4, false, false, false, false);
-	Sphere SMurDos(Vector(0, 0, 1000), 940, Vector(1, 0, 1), 1.4, false, false, false, false);
-	Sphere SMurHaut(Vector(0, 1000, 0), 940, Vector(1, 0, 0), 1.4, false, false, false, false);
-	Sphere SMurBas(Vector(0, -1000, 0), 990, Vector(0, 0, 1), 1.4, false, false, false, false);
-	Sphere SMurDroite(Vector(1000, 0, 0), 940, Vector(0, 1, 1), 1.4, false, false, false, false);
-	Sphere SMurGauche(Vector(-1000, 0, 0), 940, Vector(1, 1, 0), 1.4, false, false, false, false);
-
-	double fov = 60 * M_PI / 180;
 	Light Lum(double(4E9), Vector(-10, 20, 40));
 	Vector couleur(0, 0, 0);
 	Scene scene(Lum, couleur, 1.);
+
+	Vector C(0, 0, 55);
+	int r = 10;
+
+	Sphere SLum(scene.Lum.L, 5, Vector(1, 1, 1), 1.4, false, false, false);
+	Sphere S0(Vector(0, 0, 0), r, Vector(1, 1, 1), 1.4, true, false, false);
+	Sphere S1(Vector(0, 2, 25), r, Vector(1, 0, 0), 1.4, false, true, false);
+	Sphere S_miroir_gauche(Vector(-20, 0, 0), r, Vector(1, 0, 0), 1.4, true, false, false);
+	Sphere S_transparente_centre(Vector(0, 0, 0), r, Vector(1, 0, 0), 1.4, false, true, false);
+	Sphere S_creuse_exterieur_droite(Vector(20, 0, 0), r, Vector(0, 0, 1), 1.4, false, true, false);
+	Sphere S_creuse_interieur_droite(Vector(20, -0, 0), 9.5, Vector(0, 1, 1), 1.4, false, true, true);
+	Sphere SMurFace(Vector(0, 0, -1000), 940, Vector(0, 1, 0), 1.4, false, false, false);
+	Sphere SMurDos(Vector(0, 0, 1000), 940, Vector(1, 0, 1), 1.4, false, false, false);
+	Sphere SMurHaut(Vector(0, 1000, 0), 940, Vector(1, 0, 0), 1.4, false, false, false);
+	Sphere SMurBas(Vector(0, -1000, 0), 990, Vector(0, 0, 1), 1.4, false, false, false);
+	Sphere SMurDroite(Vector(1000, 0, 0), 940, Vector(0, 1, 1), 1.4, false, false, false);
+	Sphere SMurGauche(Vector(-1000, 0, 0), 940, Vector(1, 1, 0), 1.4, false, false, false);
+
+	double fov = 60 * M_PI / 180;
 	scene.objects.push_back(SLum);
 	scene.objects.push_back(S0);
 	//scene.objects.push_back(S_miroir_gauche);
@@ -404,7 +426,8 @@ int main() {
 				Vector u(j - W / 2 + x, i - H / 2 + y, -W / (2 * tan(fov / 2)));
 				u = u.get_normalized();
 				Ray rayon(C, u);
-				coul += scene.getColor(rayon, int(0));
+				bool lastDiffuse = false;
+				coul += scene.getColor(rayon, int(0), lastDiffuse);
 			}
 			coul = coul / nb_ray;
 			
