@@ -390,6 +390,7 @@ int main() {
 
 	int nb_ray = 100;
 	double distance_plan_nettete = 55.;
+	double rayon_obturateur = 5.;
 
 	std::vector<unsigned char> image(W * H * 3, 0);
 	#pragma omp parallel for schedule(dynamic,1)
@@ -410,8 +411,16 @@ int main() {
 
 				double u3 = uniform(engine);
 				double u4 = uniform(engine);
-				double x_capteur = sqrt(1 - u3) * cos(2 * M_PI * u4);
-				double y_capteur = sqrt(1 - u3) * sin(2 * M_PI * u4);
+				double x_capteur = u3 * 2 * rayon_obturateur - rayon_obturateur; // pour avoir des valeurs entre -rayon_obt et +rayon_obt
+				double y_capteur = u4 * 2 * rayon_obturateur - rayon_obturateur;
+				while( (x_capteur * x_capteur + y_capteur * y_capteur) > rayon_obturateur){ // permet d'avoir des valeurs dans le cercle de rayon obturateur
+					u3 = uniform(engine);
+					u4 = uniform(engine);
+					x_capteur = u3 * 2 * rayon_obturateur - rayon_obturateur; // pour avoir des valeurs entre -rayon_obt et +rayon_obt
+					y_capteur = u4 * 2 * rayon_obturateur - rayon_obturateur;
+				}
+				/*double x_capteur = sqrt(1 - u3) * cos(2 * M_PI * u4);
+				double y_capteur = sqrt(1 - u3) * sin(2 * M_PI * u4);*/
 
 				Vector u(j - W / 2 + x, i - H / 2 + y, -W / (2 * tan(fov / 2)));
 				u = u.get_normalized();
