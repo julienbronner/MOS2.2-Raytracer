@@ -408,6 +408,7 @@ int main() {
 	scene.objects.push_back(SMurGauche);
 
 	int nb_ray = 100;
+	double distance_plan_nettete = 55.;
 
 	std::vector<unsigned char> image(W * H * 3, 0);
 	#pragma omp parallel for schedule(dynamic,1)
@@ -434,7 +435,7 @@ int main() {
 				Vector u(j - W / 2 + x, i - H / 2 + y, -W / (2 * tan(fov / 2)));
 				u = u.get_normalized();
 
-				Vector cible = C + 55 * u;
+				Vector cible = C + distance_plan_nettete * u;
 				Vector Cprime = C + Vector(x_capteur, y_capteur, 0);
 				Vector uprime = (cible - Cprime).get_normalized();
 
