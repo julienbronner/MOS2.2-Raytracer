@@ -172,30 +172,8 @@ class Scene { // Scene globale, dans laquelle on insert nos objets
 public:
 	Scene(Light& Lum, Vector& color, double n_refrac_scene) : Lum(Lum), color(color), n_refrac_scene(n_refrac_scene) {
 	}
-	bool intersect_scene(const Ray& rayon, Vector& P, Vector& N, Vector& albedo, double& t, double& n_refraction, bool& mirror, bool& transparency, double& R_sphere, int& objectId) {
-		//Vector P, N;
-		//double t = 2147483647;
-		//Vector couleur = color;
+	bool intersect_scene(const Ray& rayon, Vector& P, Vector& N, double& t, Sphere& sphere_intersect , int& objectId) {
 		bool bool_sortie = false;
-		/*for (Sphere& S : objects) {
-			Vector P_current, N_current;
-			double t_current;
-			bool inter = S.intersect(rayon, P_current, N_current, t_current);
-			if (inter && (t_current < t)) {
-				P = P_current;
-				N = N_current;
-				t = t_current;
-				albedo = S.rho;
-				n_refraction = S.n_refraction;
-				mirror = S.mirror;
-				transparency = S.transparency;
-				R_sphere = S.R;
-				objectId = 0;
-				bool_sortie = true;
-				//Vector PL;
-				//PL = Lum.L - P;
-				//couleur = Lum.I / (4 * M_PI * PL.sqrNorm()) * std::max(0., dot(N, PL.get_normalized())) * S.rho / M_PI;
-			}*/
 		for (int i = 0; i < objects.size(); i++) {
 			Vector P_current, N_current;
 			double t_current;
@@ -204,11 +182,12 @@ public:
 				P = P_current;
 				N = N_current;
 				t = t_current;
-				albedo = objects[i].rho;
+				sphere_intersect = objects[i];
+				/*albedo = objects[i].rho;
 				n_refraction = objects[i].n_refraction;
 				mirror = objects[i].mirror;
 				transparency = objects[i].transparency;
-				R_sphere = objects[i].R;
+				R_sphere = objects[i].R;*/
 				objectId = i;
 				bool_sortie = true;
 				//Vector PL;
@@ -223,12 +202,13 @@ public:
 		if (rebond > 10) return Vector(0., 0., 0.);
 
 		Vector coul = color;
-		Vector P, N, albedo;
+		Vector P, N;
 		double t = 2147483647;
-		double n_refraction, R_sphere;
+		/*double n_refraction, R_sphere;
+		bool mirror, transparency;*/
 		int objectId;
-		bool mirror, transparency;
-		bool inter = intersect_scene(rayon, P, N, albedo, t, n_refraction, mirror, transparency, R_sphere, objectId);
+		Sphere sphere_intersect(Vector(0,0,0), 0., Vector(0,0,0), 1, false, false, false);
+		bool inter = intersect_scene(rayon, P, N, t, sphere_intersect, objectId);
 		if (inter) {
 
 			if (objectId == 0) {
@@ -244,7 +224,7 @@ public:
 				Vector PL;
 				PL = Lum.L - P;
 				double epsilon = 0.001;
-				if (mirror) {
+				if (sphere_intersect.mirror) {
 					// cas d'une sphere miroir
 					Vector reflex = rayon.u - 2 * dot(rayon.u, N) * N;
 					Ray rayon_reflechi(P + epsilon * reflex, reflex.get_normalized());
@@ -252,9 +232,9 @@ public:
 					return getColor(rayon_reflechi, rebond + 1, false);
 				}
 				else {
-					if (transparency) {
+					if (sphere_intersect.transparency) {
 						// cas d'une sphere transparente
-						double n1 = n_refrac_scene, n2 = n_refraction;
+						double n1 = n_refrac_scene, n2 = sphere_intersect.n_refraction;
 						Vector N2 = N;
 				
 						if (dot(rayon.u, N) > 0) {
@@ -285,23 +265,24 @@ public:
 						Vector shadowP, shadowN, shadowAlbedo;
 						int shadow_objectId;
 						double shadowt = 2147483647;
-						double shadow_nRefraction, shadow_R_Sphere;
-						bool shadowMirror, shadowTransparency;
+						//double shadow_nRefraction, shadow_R_Sphere;
+						//bool shadowMirror, shadowTransparency;
 						Ray shadowRay(P + epsilon * N, Pxprime);
-						bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowAlbedo, shadowt, shadow_nRefraction, shadowMirror, shadowTransparency, shadow_R_Sphere, shadow_objectId);
+						Sphere sphere_intersect_shadow(Vector(0, 0, 0), 0., Vector(0, 0, 0), 1, false, false, false);
+						bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowt, sphere_intersect_shadow, shadow_objectId);
 						if (shadowInter && shadowt < d-epsilon*10) {
 							coul = Vector(0., 0., 0.);
 						}
 						else {
 							double proba = std::max(0. ,dot(-PL, w)) / (M_PI*objects[0].R * objects[0].R);
 							double J = std::max(0., dot(w, -Pxprime))/(d*d);
-							coul = Lum.I / (4 * M_PI * objects[0].R * objects[0].R) * std::max(0., dot(N, Pxprime)) * albedo / M_PI * J / proba;
+							coul = Lum.I / (4 * M_PI * objects[0].R * objects[0].R) * std::max(0., dot(N, Pxprime)) * sphere_intersect.rho / M_PI * J / proba;
 						}
 
 						// eclairage indirect
 						Vector random_vector = random_cos(N);
 						Ray rayon_indirect(P + epsilon * random_vector, random_vector.get_normalized());
-						coul += albedo * getColor(rayon_indirect, rebond + 1, true);
+						coul += sphere_intersect.rho * getColor(rayon_indirect, rebond + 1, true);
 					}
 				}
 			}
