@@ -120,3 +120,24 @@ on passe d'une emission en I/(4*PI) à I/(4*PI*R²) avec R le rayon de la sphere l
 L'origine de la caméra n'est pas un point, mais une surface : on prend donc aléatoirement un point de cette surface aléatoirement
 comme origine. Normalement la surface c'est une hexagone, mais on peut prendre un cercle pour simplifier
 ou même un obturateur gaussien
+
+# Maillage
+
+Généralement on fait un triangle
+class Mesh
+    std::vector<Vector> vertices
+    std::vector<Triplet> faces
+
+Un sommet ("vertices") aura un vector pour être défini en position
+On note chaque sommet par un numéro, donc un triangle sera résumé par ses trois sommets (ce sera les "faces")
+On fait toujours le même sens de parcours (horaire ou anti-horaire)
+On utilise un parser déjà fait pour lire les fichiers .obj
+
+Pour intersecter un rayon et notre ensemble de triangle, on fait comme avec les spheres : on va tester l'intersection
+avec tous les triangles, et on prend l'intersection la plus proche
+Pour l'intersection : algorithme de Möller Trumbore
+On peut définir les points d'un triangle ABC par 
+    P = alpha*A + beta*B + gamma*C avec alpha+beta+gamma = 1 et alpha, beta, gamme >=1
+
+## Pour accélerer, on teste d'abord avec la boite englobante
+
