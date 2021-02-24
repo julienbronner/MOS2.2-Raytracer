@@ -141,3 +141,40 @@ On peut définir les points d'un triangle ABC par
 
 ## Pour accélerer, on teste d'abord avec la boite englobante
 
+## Bounding box successive
+
+Struct Noeud {
+    Noeud* fg, Noeud* fd
+    Bbox b
+    int debut, fin_exclu
+}
+
+int indice_pivot = noeud.debut
+for i = noeud.debut .. noeuf.fin
+    if centre[triangle[i]]< milieu_boite:
+        swap(triangle[i], triangle[indice_pivot])
+        indice_pivot++
+
+Condition d'arrêt : indice du pivot qui n'a pas du tout été augmenté, ou indice du pivot à la toute fin 
+                    ou seuil d'arrêt s'il n'y que 3 triangles (ou 4 ou 5) dans l'arbre
+
+Cette création d'arbre se fait après le chargement de l'image et une fois les modifications d'echelle ou d'emplacement faites
+
+Ensuite on fait un parcours en profondeur de l'arbre (pour faciliter de potentielles améliorations)
+
+Dans la routine d'intersection du maillage : 
+
+List<Noeud*> l;
+l.push_back(racine)
+if(!intersect(ray, racine)) # il n'y a même d'intersection avec la boite de base
+    return, # on retourne rien
+while (!l.empty())
+    Noeud* courant = l.front
+    l.pop_front()
+    if (intersect(ray, courant->fg)) # s'il y a un fils gauche
+        l.push_front(c->fg);
+    pareil droite
+    else : # pas de fils gauche
+        comme avant : 
+        pour tout i entre [c.debut, c.fin]
+            intersect(rayon, triangle[i])

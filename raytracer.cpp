@@ -11,6 +11,8 @@
 #include <math.h>
 #include <algorithm>
 
+#include <list>
+
 #include <chrono>
 
 #include <iostream>
@@ -205,6 +207,13 @@ public:
 	Vector mini, maxi;
 };
 
+class Noeud {
+public:
+	Noeud* fg, * fd;
+	BoundingBox b;
+	int debut, fin_exclu;
+};
+
 // Code simple obj file reader
 #include <string>
 #include <stdio.h>
@@ -229,19 +238,65 @@ public:
 		this->transparency = transparency;
 	};
 
-	void buildBB() {
+	BoundingBox buildBB(int debut, int fin) { //debut et fin sont des indices de triangle
+		BoundingBox BB;
 		BB.mini = Vector(1E9, 1E9, 1E9);
 		BB.maxi = Vector(-1E9, -1E9, -1E9);
-		for (int i = 0; i < vertices.size(); i++) {
-			BB.mini[0] = std::min(BB.mini[0], vertices[i][0]);
-			BB.mini[1] = std::min(BB.mini[1], vertices[i][1]);
-			BB.mini[2] = std::min(BB.mini[2], vertices[i][2]);
+		for (int i = debut; i < fin; i++) {
+			for(int j = 0; j< 3; j++){
+				BB.mini[j] = std::min(BB.mini[j], vertices[indices[i].vtxi][j]);
+				BB.mini[j] = std::min(BB.mini[j], vertices[indices[i].vtxj][j]);
+				BB.mini[j] = std::min(BB.mini[j], vertices[indices[i].vtxk][j]);
 
-			BB.maxi[0] = std::max(BB.maxi[0], vertices[i][0]);
-			BB.maxi[1] = std::max(BB.maxi[1], vertices[i][1]);
-			BB.maxi[2] = std::max(BB.maxi[2], vertices[i][2]);
+				BB.maxi[j] = std::max(BB.maxi[j], vertices[indices[i].vtxi][j]);
+				BB.maxi[j] = std::max(BB.maxi[j], vertices[indices[i].vtxj][j]);
+				BB.maxi[j] = std::max(BB.maxi[j], vertices[indices[i].vtxk][j]);
+			}
 		}
+		return BB;
 	};
+
+	void buildBVH(Noeud* n, int debut, int fin_exclu) {
+		n->debut = debut;
+		n->fin_exclu = fin_exclu;
+		n->b = buildBB(debut, fin_exclu);
+		Vector diag = n->b.maxi - n->b.mini;
+		int dim;
+		if (diag[0] >= diag[1] && diag[0] >= diag[2]) {
+			dim = 0;
+		}
+		else {
+			if (diag[1] >= diag[0] && diag[1] >= diag[2]) {
+				dim = 1;
+			}
+			else {
+				dim = 2;
+			}
+		}
+		double milieu = (n->b.mini[dim] + n->b.maxi[dim]) /2.;
+		int indice_pivot = n->debut;
+		for (int i = n->debut; i < n->fin_exclu; i++) {
+			double milieu_triangle = (vertices[indices[i].vtxi][dim] + vertices[indices[i].vtxj][dim] + vertices[indices[i].vtxk][dim]) / 3.;
+			if (milieu_triangle < milieu) {
+				std::swap(indices[i], indices[indice_pivot]);
+				indice_pivot++;
+			}
+		}
+
+		n->fg = NULL;
+		n->fd = NULL;
+		int nbr_triangle_critere_arret = 5;
+		if (indice_pivot == debut || indice_pivot == fin_exclu || (fin_exclu - debut < nbr_triangle_critere_arret)) {
+			return;
+		}
+
+		n->fg = new Noeud;
+		n->fd = new Noeud;
+
+		buildBVH(n->fg, n->debut, indice_pivot);
+		buildBVH(n->fd, indice_pivot, n->fin_exclu);
+
+	}
 
 	void readOBJ(const char* obj) {
 
@@ -426,36 +481,53 @@ public:
 	}
 
 	bool intersect(const Ray& r, Vector& P, Vector& normale, double& t) {
+		if (!BVH->b.intersect(r)) return false;
+
 		t = 1E10;
 		bool intersect_bool = false;
-		if (!BB.intersect(r)) {
-			return false;
-		};
 
-		for (int i = 0; i < indices.size(); i++) {
-			const Vector& A = vertices[indices[i].vtxi];
-			const Vector& B = vertices[indices[i].vtxj];
-			const Vector& C = vertices[indices[i].vtxk];
+		std::list<Noeud*> l;
+		l.push_back(BVH);
+		while (!l.empty()) {
+			Noeud* courant = l.front();
+			l.pop_front();
 
-			Vector e1 = B - A;
-			Vector e2 = C - A;
-			Vector N = cross(e1, e2);
-			Vector AO = r.C - A;
-			Vector AOu = cross(AO, r.u);
-			double invUN = 1. / dot(r.u, N);
-			double beta = -dot(e2, AOu) * invUN;
-			double gamma = dot(e1, AOu) * invUN;
-			double alpha = 1 - beta - gamma;
-			double localt = -dot(AO, N) * invUN;
-			if (beta >= 0 && gamma >= 0 && beta <= 1 && gamma <= 1 && alpha >= 0 && localt >= 0) {
-				intersect_bool = true;
-				if (localt < t) {
-					t = localt;
-					normale = N.get_normalized();
-					P = r.C + t * r.u;
+			if (courant->fg) {
+				if (courant->fg->b.intersect(r)) {
+					l.push_front(courant->fg);
+				}
+				if (courant->fd->b.intersect(r)) {
+					l.push_front(courant->fd);
+				}
+			}
+			else {
+				for (int i = courant->debut; i < courant->fin_exclu; i++) {
+					const Vector& A = vertices[indices[i].vtxi];
+					const Vector& B = vertices[indices[i].vtxj];
+					const Vector& C = vertices[indices[i].vtxk];
+
+					Vector e1 = B - A;
+					Vector e2 = C - A;
+					Vector N = cross(e1, e2);
+					Vector AO = r.C - A;
+					Vector AOu = cross(AO, r.u);
+					double invUN = 1. / dot(r.u, N);
+					double beta = -dot(e2, AOu) * invUN;
+					double gamma = dot(e1, AOu) * invUN;
+					double alpha = 1 - beta - gamma;
+					double localt = -dot(AO, N) * invUN;
+					if (beta >= 0 && gamma >= 0 && beta <= 1 && gamma <= 1 && alpha >= 0 && localt >= 0) {
+						intersect_bool = true;
+						if (localt < t) {
+							t = localt;
+							normale = N.get_normalized();
+							P = r.C + t * r.u;
+						}
+					}
 				}
 			}
 		}
+
 		return intersect_bool;
 	}
 
@@ -464,10 +536,9 @@ public:
 	std::vector<Vector> normals;
 	std::vector<Vector> uvs;
 	std::vector<Vector> vertexcolors;
-	BoundingBox BB;
+	Noeud* BVH = new Noeud;
 };
 // fin code simple obj file reader
-
 
 
 class Scene { // Scene globale, dans laquelle on insert nos objets
@@ -655,8 +726,8 @@ void integrateCosDimQuatre() {
 int main() {
 	
 	auto start = std::chrono::high_resolution_clock::now();
-	int W = 128;
-	int H = 128;
+	int W = 512;
+	int H = 512;
 
 	Light Lum(double(4E9), Vector(-10, 20, 40));
 	Vector couleur(0, 0, 0);
@@ -687,7 +758,8 @@ int main() {
 		m.vertices[i][2] = -m.vertices[i][2];
 		m.vertices[i][1] -= 10;
 	}
-	m.buildBB();
+	//m.buildBB();
+	m.buildBVH(m.BVH, 0, m.indices.size());
 
 	double fov = 60 * M_PI / 180;
 	scene.objects.push_back(&SLum);
@@ -708,16 +780,16 @@ int main() {
 	scene.objects.push_back(&SMurDroite);
 	scene.objects.push_back(&SMurGauche);
 
-	int nb_ray = 1;
+	int nb_ray = 100;
 	double distance_plan_nettete = 55.;
 	double rayon_obturateur = 0.01;
 
 	std::vector<unsigned char> image(W * H * 3, 0);
 	#pragma omp parallel for schedule(dynamic,1)
 	for (int i = 0; i < H; i++) {
-
+		std::cout << "Pixel hauteur: " << i << std::endl;
 		for (int j = 0; j < W; j++) {
-
+			
 			Vector coul = scene.color;
 
 			//Vector coul = scene.getColor(rayon, int(0));
