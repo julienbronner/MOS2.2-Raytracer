@@ -520,7 +520,9 @@ public:
 						intersect_bool = true;
 						if (localt < t) {
 							t = localt;
-							normale = N.get_normalized();
+							//normale = N.get_normalized();
+							normale = alpha * normals[indices[i].ni] + beta * normals[indices[i].nj] + gamma * normals[indices[i].nk];
+							normale = normale.get_normalized(); // on peut améliorer en ne gardant que l'indice et on calcul ça a la fin
 							P = r.C + t * r.u;
 						}
 					}
@@ -752,12 +754,29 @@ int main() {
 	Sphere SMurGauche(Vector(-1000, 0, 0), 940, Vector(0.5, 0.5, 0), 1.4, false, false, false);
 
 	TriangleMesh m(Vector(1., 1., 1.));
-	m.readOBJ("D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/Australian_Cattle_Dog_v1_L3.123c9c6a5764-399b-4e86-9897-6bcb08b5e8ed/13463_Australian_Cattle_Dog_v3.obj");
+	/*m.readOBJ("D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/Australian_Cattle_Dog_v1_L3.123c9c6a5764-399b-4e86-9897-6bcb08b5e8ed/13463_Australian_Cattle_Dog_v3.obj");
 	for (int i = 0; i < m.vertices.size(); i++) {
 		std::swap(m.vertices[i][1], m.vertices[i][2]);
 		m.vertices[i][2] = -m.vertices[i][2];
 		m.vertices[i][1] -= 10;
 	}
+	for (int i = 0; i < m.normals.size(); i++) {
+		std::swap(m.normals[i][1], m.normals[i][2]);
+		m.normals[i][2] = -m.normals[i][2];
+	}*/
+
+	m.readOBJ("D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/oot-link-obj/oot-link.obj");
+	for (int i = 0; i < m.vertices.size(); i++) {
+		m.vertices[i] = m.vertices[i] * 200;
+		m.vertices[i][1] -= 10;
+		m.vertices[i][2] += 10;
+	}
+	/*for (int i = 0; i < m.normals.size(); i++) {
+		std::swap(m.normals[i][1], m.normals[i][2]);
+		m.normals[i][2] = -m.normals[i][2];
+	}*/
+
+
 	//m.buildBB();
 	m.buildBVH(m.BVH, 0, m.indices.size());
 
@@ -780,7 +799,7 @@ int main() {
 	scene.objects.push_back(&SMurDroite);
 	scene.objects.push_back(&SMurGauche);
 
-	int nb_ray = 100;
+	int nb_ray = 20;
 	double distance_plan_nettete = 55.;
 	double rayon_obturateur = 0.01;
 

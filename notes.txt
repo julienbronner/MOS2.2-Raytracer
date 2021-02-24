@@ -141,7 +141,8 @@ On peut définir les points d'un triangle ABC par
 
 ## Pour accélerer, on teste d'abord avec la boite englobante
 
-## Bounding box successive
+## Bounding box successive/recurssive 
+Image 17
 
 Struct Noeud {
     Noeud* fg, Noeud* fd
@@ -178,3 +179,7 @@ while (!l.empty())
         comme avant : 
         pour tout i entre [c.debut, c.fin]
             intersect(rayon, triangle[i])
+
+# Ajout normale de lumière
+Image 18
+On moyenne pour un triangle les normales des sommets en pondérant avec le barycentre
