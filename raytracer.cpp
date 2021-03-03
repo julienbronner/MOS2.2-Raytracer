@@ -757,8 +757,8 @@ void integrateCosDimQuatre() {
 int main() {
 	
 	auto start = std::chrono::high_resolution_clock::now();
-	int W = 512;
-	int H = 512;
+	int W = 1024;
+	int H = 1024;
 
 	Light Lum(double(2E9), Vector(-10, 20, 40));
 	Vector couleur(0, 0, 0);
@@ -797,9 +797,11 @@ int main() {
 	TriangleMesh m(Vector(1., 1., 1.));
 
 	// Code Cattle Dog
-	const char* path_image = "D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/Australian_Cattle_Dog_v1_L3.123c9c6a5764-399b-4e86-9897-6bcb08b5e8ed/";
-	m.readOBJ("D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/Australian_Cattle_Dog_v1_L3.123c9c6a5764-399b-4e86-9897-6bcb08b5e8ed/13463_Australian_Cattle_Dog_v3.obj");
-	m.loadTexture("D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/Australian_Cattle_Dog_v1_L3.123c9c6a5764-399b-4e86-9897-6bcb08b5e8ed/Australian_Cattle_Dog_dif.jpg");
+	/*std::string path_chargement = "D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/Australian_Cattle_Dog_v1_L3.123c9c6a5764-399b-4e86-9897-6bcb08b5e8ed/";
+	std::string path_obj = path_chargement + "13463_Australian_Cattle_Dog_v3.obj";
+	std::string path_texture = path_chargement + "Australian_Cattle_Dog_dif.jpg";
+	m.readOBJ(path_obj.c_str());
+	m.loadTexture(path_texture.c_str());
 
 	for (int i = 0; i < m.vertices.size(); i++) {
 		std::swap(m.vertices[i][1], m.vertices[i][2]);
@@ -809,15 +811,56 @@ int main() {
 	for (int i = 0; i < m.normals.size(); i++) {
 		std::swap(m.normals[i][1], m.normals[i][2]);
 		m.normals[i][2] = -m.normals[i][2];
-	}
+	}*/
+
 
 	// Code Link
-	/*m.readOBJ("D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/oot-link-obj/oot-link.obj");
+	std::string path_chargement = "D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/oot-link-obj/";
+	std::string path_obj = path_chargement + "oot-link.obj";
+	std::string path_texture1 = path_chargement + "FitLink00_BodyB.png";
+	std::string path_texture2 = path_chargement + "FitLink00_Shield.png";
+	std::string path_texture3 = path_chargement + "FitLink00_Face.png";
+	std::string path_texture4 = path_chargement + "FitLink00_BodyB.png";
+	std::string path_texture5 = path_chargement + "FitLink00_Grip.png";
+	std::string path_texture6 = path_chargement + "FitLink00_BodyB.png";
+	std::string path_texture7 = path_chargement + "FitLink00_BodyC.png";
+	std::string path_texture8 = path_chargement + "FitLink00_Sheathd.png";
+	std::string path_texture9 = path_chargement + "FitLink00_Face.png";
+	std::string path_texture10 = path_chargement + "FitLink00_BodyA.png";
+	std::string path_texture11 = path_chargement + "FitLink00_Eye_SiromeL.png";
+	std::string path_texture12 = path_chargement + "FitLink00_BodyA.png";
+	std::string path_texture13 = path_chargement + "FitLink00_BodyA.png";
+	std::string path_texture14 = path_chargement + "FitLink00_Face.png";
+	std::string path_texture15 = path_chargement + "FitLink00_BodyA.png";
+	std::string path_texture16 = path_chargement + "FitLink00_Eye_Sirome.png";
+	std::string path_texture17 = path_chargement + "FitLink00_BodyB.png";
+	std::string path_texture18 = path_chargement + "FitLink00_Grip.png";
+
+	m.readOBJ(path_obj.c_str());
+	m.loadTexture(path_texture1.c_str());
+	m.loadTexture(path_texture2.c_str());
+	m.loadTexture(path_texture3.c_str());
+	m.loadTexture(path_texture4.c_str());
+	m.loadTexture(path_texture5.c_str());
+	m.loadTexture(path_texture6.c_str());
+	m.loadTexture(path_texture7.c_str());
+	m.loadTexture(path_texture8.c_str());
+	m.loadTexture(path_texture9.c_str());
+	m.loadTexture(path_texture10.c_str());
+	m.loadTexture(path_texture11.c_str());
+	m.loadTexture(path_texture12.c_str());
+	m.loadTexture(path_texture13.c_str());
+	m.loadTexture(path_texture14.c_str());
+	m.loadTexture(path_texture15.c_str());
+	m.loadTexture(path_texture16.c_str());
+	m.loadTexture(path_texture17.c_str());
+	m.loadTexture(path_texture18.c_str());
+	
 	for (int i = 0; i < m.vertices.size(); i++) {
 		m.vertices[i] = m.vertices[i] * 150;
 		m.vertices[i][1] -= 10;
 		m.vertices[i][2] += 10;
-	}*/
+	}
 	/*for (int i = 0; i < m.normals.size(); i++) {
 		std::swap(m.normals[i][1], m.normals[i][2]);
 		m.normals[i][2] = -m.normals[i][2];
@@ -846,7 +889,7 @@ int main() {
 	scene.objects.push_back(&SMurDroite);
 	scene.objects.push_back(&SMurGauche);
 
-	int nb_ray = 10;
+	int nb_ray = 100;
 	double distance_plan_nettete = 55.;
 	double rayon_obturateur = 0.01;
 
