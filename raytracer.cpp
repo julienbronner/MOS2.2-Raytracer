@@ -757,14 +757,26 @@ void integrateCosDimQuatre() {
 int main() {
 	
 	auto start = std::chrono::high_resolution_clock::now();
-	int W = 1024;
-	int H = 1024;
+	int W = 512;
+	int H = 512;
 
 	Light Lum(double(2E9), Vector(-10, 20, 40));
 	Vector couleur(0, 0, 0);
 	Scene scene(Lum, couleur, 1.);
 
-	Vector C(0, 0, 55);
+	Vector C(0, 0, 55); // camera (droite, haut, direction regard)
+	
+	// Mouvement de caméra
+	double verticalAngle = -0 * M_PI / 180;
+	double horizontalAngle = -0 * M_PI / 180;
+	Vector up(0, cos(verticalAngle), sin(verticalAngle));
+	Vector right(cos(horizontalAngle), 0, sin(horizontalAngle));
+	double up0 = up[0];
+	up[0] = cos(horizontalAngle) * up[0] - sin(horizontalAngle) * up[2];
+	up[2] = sin(horizontalAngle) * up0 + cos(horizontalAngle) * up[2];
+
+	Vector viewDir = cross(up, right);
+	
 	int r = 10;
 
 	Sphere SLum(scene.Lum.L, 5, Vector(1, 1, 1), 1.4, false, false, false);
@@ -834,7 +846,7 @@ int main() {
 	scene.objects.push_back(&SMurDroite);
 	scene.objects.push_back(&SMurGauche);
 
-	int nb_ray = 100;
+	int nb_ray = 10;
 	double distance_plan_nettete = 55.;
 	double rayon_obturateur = 0.01;
 
@@ -868,11 +880,13 @@ int main() {
 				/*double x_capteur = sqrt(1 - u3) * cos(2 * M_PI * u4);
 				double y_capteur = sqrt(1 - u3) * sin(2 * M_PI * u4);*/
 
-				Vector u(j - W / 2 + x, i - H / 2 + y, -W / (2 * tan(fov / 2)));
+				Vector u(j - W / 2 + x, i - H / 2 + y, W / (2 * tan(fov / 2)));
 				u = u.get_normalized();
+				u = u[0] * right + u[1] * up + u[2] * viewDir;
 
 				Vector cible = C + distance_plan_nettete * u;
-				Vector Cprime = C + Vector(x_capteur, y_capteur, 0);
+				Vector Cprime = C + x_capteur * right + y_capteur * up;
+				//Vector Cprime = C + Vector(x_capteur, y_capteur, 0);
 				Vector uprime = (cible - Cprime).get_normalized();
 
 				Ray rayon(Cprime, uprime);
