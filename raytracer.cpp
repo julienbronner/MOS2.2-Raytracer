@@ -114,7 +114,7 @@ public:
 class Object {
 public:
 	Object() {}
-	virtual bool intersect(const Ray& r, Vector& P, Vector& normale, double& t) = 0;
+	virtual bool intersect(const Ray& r, Vector& P, Vector& normale, double& t, Vector& couleur) = 0;
 	Vector rho;
 	double n_refraction;
 	bool mirror, transparency;
@@ -133,14 +133,15 @@ public:
 		this->mirror = mirror;
 		this->transparency = transparency;
 	}
-	bool intersect(const Ray& r, Vector& P, Vector& N, double& t) {
+	bool intersect(const Ray& r, Vector& P, Vector& N, double& t, Vector& couleur) {
 		// pour resoudre a*t^2 + b*t + c = 0
 		double a = 1;
 		double b = 2 * dot(r.u, r.C - O);
 		double c = (r.C - O).sqrNorm() - R * R;
 		double delta = b * b - 4 * a * c;
+		couleur = rho;
 		if (delta < 0) {
-			double t = 1E10;
+			t = 1E10;
 			return false;
 		}
 		else {
@@ -480,7 +481,15 @@ public:
 
 	}
 
-	bool intersect(const Ray& r, Vector& P, Vector& normale, double& t) {
+	void loadTexture(const char* filename) {
+		int W, H, C;
+		unsigned char* texture = stbi_load(filename, &W, &H, &C, 3); // on force d'avoir trois canaux de couleurs
+		Wtexture.push_back(W);
+		Htexture.push_back(H);
+		textures.push_back(texture);
+	}
+
+	bool intersect(const Ray& r, Vector& P, Vector& normale, double& t, Vector& couleur) {
 		if (!BVH->b.intersect(r)) return false;
 
 		t = 1E10;
@@ -524,6 +533,23 @@ public:
 							normale = alpha * normals[indices[i].ni] + beta * normals[indices[i].nj] + gamma * normals[indices[i].nk];
 							normale = normale.get_normalized(); // on peut améliorer en ne gardant que l'indice et on calcul ça a la fin
 							P = r.C + t * r.u;
+							Vector UV = alpha * uvs[indices[i].uvi] + beta * uvs[indices[i].uvj] + gamma * uvs[indices[i].uvk];
+							int W = Wtexture[indices[i].group];
+							int H = Htexture[indices[i].group];
+							UV = UV * Vector(W, H, 0);
+							int uvx = UV[0] + 0.5; //arrondi à l'entier supérieur
+							int uvy = H - UV[1] + 0.5;
+							uvx = uvx % W; 
+							uvy = uvy % H;
+							if (uvx < 0) {
+								uvx += W;
+							}
+							if (uvy < 0) {
+								uvy += H;
+							}
+							couleur = Vector(std::pow(textures[indices[i].group][(uvy * W + uvx) * 3 + 0] / 255., 2.2), // 2.2 pour la correction gamma, a mettre ailleurs pour que ce soit plus propre
+								std::pow(textures[indices[i].group][(uvy * W + uvx) * 3 + 1] / 255., 2.2),
+								std::pow(textures[indices[i].group][(uvy * W + uvx) * 3 + 2] / 255., 2.2) );
 						}
 					}
 				}
@@ -538,6 +564,8 @@ public:
 	std::vector<Vector> normals;
 	std::vector<Vector> uvs;
 	std::vector<Vector> vertexcolors;
+	std::vector< unsigned char*> textures;
+	std::vector<int> Wtexture, Htexture;
 	Noeud* BVH = new Noeud;
 };
 // fin code simple obj file reader
@@ -551,16 +579,17 @@ class Scene { // Scene globale, dans laquelle on insert nos objets
 public:
 	Scene(Light& Lum, Vector& color, double n_refrac_scene) : Lum(Lum), color(color), n_refrac_scene(n_refrac_scene) {
 	}
-	bool intersect_scene(const Ray& rayon, Vector& P, Vector& N, double& t, int& objectId) {
+	bool intersect_scene(const Ray& rayon, Vector& P, Vector& N, double& t, int& objectId, Vector& couleur) {
 		bool bool_sortie = false;
 		for (int i = 0; i < objects.size(); i++) {
-			Vector P_current, N_current;
+			Vector P_current, N_current, couleur_current;
 			double t_current;
-			bool inter = objects[i]->intersect(rayon, P_current, N_current, t_current);
+			bool inter = objects[i]->intersect(rayon, P_current, N_current, t_current, couleur_current);
 			if (inter && (t_current < t)) {
 				P = P_current;
 				N = N_current;
 				t = t_current;
+				couleur = couleur_current;
 				//sphere_intersect = objects[i];
 				/*albedo = objects[i].rho;
 				n_refraction = objects[i].n_refraction;
@@ -581,15 +610,15 @@ public:
 
 		if (rebond > 10) return Vector(0., 0., 0.);
 
-		Vector coul = color;
-		Vector P, N;
+		Vector couleur_return = color;
+		Vector P, N, couleur;
 		double t = 2147483647;
 		/*double n_refraction, R_sphere;
 		bool mirror, transparency;*/
 		int objectId;
 		
 		//Sphere sphere_intersect(Vector(0,0,0), 0., Vector(0,0,0), 1, false, false, false);
-		bool inter = intersect_scene(rayon, P, N, t, objectId);
+		bool inter = intersect_scene(rayon, P, N, t, objectId, couleur);
 		if (inter) {
 
 			if (objectId == 0) {
@@ -644,33 +673,33 @@ public:
 						double d = sqrt(Pxprime.sqrNorm()); 
 						Pxprime = Pxprime / d;
 
-						Vector shadowP, shadowN, shadowAlbedo;
+						Vector shadowP, shadowN, shadowAlbedo, shadowCouleur;
 						int shadow_objectId;
 						double shadowt = 2147483647;
 						//double shadow_nRefraction, shadow_R_Sphere;
 						//bool shadowMirror, shadowTransparency;
 						Ray shadowRay(P + epsilon * N, Pxprime);
 						//Sphere sphere_intersect_shadow(Vector(0, 0, 0), 0., Vector(0, 0, 0), 1, false, false, false);
-						bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowt, shadow_objectId);
+						bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowt, shadow_objectId, shadowCouleur);
 						if (shadowInter && shadowt < d-epsilon*10) {
-							coul = Vector(0., 0., 0.);
+							couleur_return = Vector(0., 0., 0.);
 						}
 						else {
 							double sqr_R = sqr(dynamic_cast<Sphere*>(objects[0])->R);
 							double proba = std::max(0. ,dot(-PL, w)) / (M_PI* sqr_R);
 							double J = std::max(0., dot(w, -Pxprime))/(d*d);
-							coul = Lum.I / (4 * M_PI * sqr_R) * std::max(0., dot(N, Pxprime)) * objects[objectId]->rho / M_PI * J / proba;
+							couleur_return = Lum.I / (4 * M_PI * sqr_R) * std::max(0., dot(N, Pxprime)) * couleur / M_PI * J / proba;
 						}
 
 						// eclairage indirect
 						Vector random_vector = random_cos(N);
 						Ray rayon_indirect(P + epsilon * random_vector, random_vector.get_normalized());
-						coul += objects[objectId]->rho * getColor(rayon_indirect, rebond + 1, true);
+						couleur_return += couleur * getColor(rayon_indirect, rebond + 1, true);
 					}
 				}
 			}
 		}
-		return coul;
+		return couleur_return;
 	}
 
 	std::vector<Object*> objects;
@@ -728,10 +757,10 @@ void integrateCosDimQuatre() {
 int main() {
 	
 	auto start = std::chrono::high_resolution_clock::now();
-	int W = 512;
-	int H = 512;
+	int W = 1024;
+	int H = 1024;
 
-	Light Lum(double(4E9), Vector(-10, 20, 40));
+	Light Lum(double(2E9), Vector(-10, 20, 40));
 	Vector couleur(0, 0, 0);
 	Scene scene(Lum, couleur, 1.);
 
@@ -748,13 +777,18 @@ int main() {
 	Sphere S_creuse_interieur_droite(Vector(20, -0, 0), 9.5, Vector(0, 1, 1), 1.4, false, true, true);
 	Sphere SMurFace(Vector(0, 0, -1000), 940, Vector(0, 0.5, 0), 1.4, false, false, false);
 	Sphere SMurDos(Vector(0, 0, 1000), 940, Vector(0.5, 0, 0.5), 1.4, false, false, false);
-	Sphere SMurHaut(Vector(0, 1000, 0), 940, Vector(0.5, 0, 0), 1.4, false, false, false);
-	Sphere SMurBas(Vector(0, -1000, 0), 990, Vector(0, 0, 0.5), 1.4, false, false, false);
+	Sphere SMurHaut(Vector(0, 1000, 0), 940, Vector(0.5, 0.5, 0.5), 1.4, false, false, false);
+	Sphere SMurBas(Vector(0, -1000, 0), 990, Vector(0.5, 0.5, 0.5), 1.4, false, false, false);
 	Sphere SMurDroite(Vector(1000, 0, 0), 940, Vector(0, 0.5, 0.5), 1.4, false, false, false);
 	Sphere SMurGauche(Vector(-1000, 0, 0), 940, Vector(0.5, 0.5, 0), 1.4, false, false, false);
 
 	TriangleMesh m(Vector(1., 1., 1.));
-	/*m.readOBJ("D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/Australian_Cattle_Dog_v1_L3.123c9c6a5764-399b-4e86-9897-6bcb08b5e8ed/13463_Australian_Cattle_Dog_v3.obj");
+
+	// Code Cattle Dog
+	const char* path_image = "D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/Australian_Cattle_Dog_v1_L3.123c9c6a5764-399b-4e86-9897-6bcb08b5e8ed/";
+	m.readOBJ("D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/Australian_Cattle_Dog_v1_L3.123c9c6a5764-399b-4e86-9897-6bcb08b5e8ed/13463_Australian_Cattle_Dog_v3.obj");
+	m.loadTexture("D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/Australian_Cattle_Dog_v1_L3.123c9c6a5764-399b-4e86-9897-6bcb08b5e8ed/Australian_Cattle_Dog_dif.jpg");
+
 	for (int i = 0; i < m.vertices.size(); i++) {
 		std::swap(m.vertices[i][1], m.vertices[i][2]);
 		m.vertices[i][2] = -m.vertices[i][2];
@@ -763,14 +797,15 @@ int main() {
 	for (int i = 0; i < m.normals.size(); i++) {
 		std::swap(m.normals[i][1], m.normals[i][2]);
 		m.normals[i][2] = -m.normals[i][2];
-	}*/
+	}
 
-	m.readOBJ("D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/oot-link-obj/oot-link.obj");
+	// Code Link
+	/*m.readOBJ("D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/oot-link-obj/oot-link.obj");
 	for (int i = 0; i < m.vertices.size(); i++) {
-		m.vertices[i] = m.vertices[i] * 200;
+		m.vertices[i] = m.vertices[i] * 150;
 		m.vertices[i][1] -= 10;
 		m.vertices[i][2] += 10;
-	}
+	}*/
 	/*for (int i = 0; i < m.normals.size(); i++) {
 		std::swap(m.normals[i][1], m.normals[i][2]);
 		m.normals[i][2] = -m.normals[i][2];
@@ -799,7 +834,7 @@ int main() {
 	scene.objects.push_back(&SMurDroite);
 	scene.objects.push_back(&SMurGauche);
 
-	int nb_ray = 20;
+	int nb_ray = 100;
 	double distance_plan_nettete = 55.;
 	double rayon_obturateur = 0.01;
 

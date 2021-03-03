@@ -1,6 +1,15 @@
 # Rapport 
 
 5-6 pages, images de résultats, timing pour les rendus
+Pour le 24 mars
+
+# Partiel
+
+Calcul d'intersection, petit bout de code a debuguer (en fonction des images produites) --> pas de bug de syntaxe
+Compréhension générale du cours
+Il n'y a pas a connaitre par coeur de formule compliquée (sauf formule pour refracter un rayon)
+Pas de document, pas de calculatrice, pas d'ordi
+Pas d'annales des années précédentes
 
 # Faire la sphere
 
@@ -183,3 +192,11 @@ while (!l.empty())
 # Ajout normale de lumière
 Image 18
 On moyenne pour un triangle les normales des sommets en pondérant avec le barycentre
+
+# Texture
+Image 19
+Les traits sur le chien sont des tests
+Coordonnée (u,v) (nombre entre 0 et 1, en partant de (0,0) en bas a gauche et (1,1) en haut a droit) ) par triangle par sommet
+Si on a entre -inf et +inf, on travaille modulo 1
+
+Chaque triangle du maillage est accompagné d'un indice de texture (triangleIndices --> intGroup)
