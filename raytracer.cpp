@@ -578,9 +578,9 @@ class Scene { // Scene globale, dans laquelle on insert nos objets
 public:
 	Scene(Light& Lum, Vector& color, double n_refrac_scene) : Lum(Lum), color(color), n_refrac_scene(n_refrac_scene) {
 	}
-	bool intersect_scene(const Ray& rayon, Vector& P, Vector& N, double& t, int& objectId, Vector& couleur, float correction_gamma) {
+	bool intersect_scene(const Ray& rayon, Vector& P, Vector& N, double& t, int& objectId, Vector& couleur, double correction_gamma) {
 		bool bool_sortie = false;
-		for (int i = 0; i < objects.size(); i++) {
+		for (unsigned int i = 0; i < objects.size(); i++) {
 			Vector P_current, N_current, couleur_current;
 			double t_current;
 			bool inter = objects[i]->intersect(rayon, P_current, N_current, t_current, couleur_current, correction_gamma);
@@ -596,7 +596,7 @@ public:
 		return bool_sortie;
 	}
 
-	Vector getColor(Ray& rayon, const int& rebond, bool dernier_element_diffus, float correction_gamma) {
+	Vector getColor(Ray& rayon, const int& rebond, bool dernier_element_diffus, double correction_gamma) {
 
 		if (rebond > 10) return Vector(0., 0., 0.);
 
@@ -843,7 +843,7 @@ int main() {
 	m.loadTexture(path_texture17.c_str());
 	m.loadTexture(path_texture18.c_str());
 	
-	for (int i = 0; i < m.vertices.size(); i++) {
+	for (unsigned int i = 0; i < m.vertices.size(); i++) {
 		m.vertices[i] = m.vertices[i] * 150;
 		m.vertices[i][1] -= 10;
 		m.vertices[i][2] += 10;
