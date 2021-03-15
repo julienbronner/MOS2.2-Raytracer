@@ -114,7 +114,7 @@ public:
 class Object {
 public:
 	Object() {}
-	virtual bool intersect(const Ray& r, Vector& P, Vector& normale, double& t, Vector& couleur) = 0;
+	virtual bool intersect(const Ray& r, Vector& P, Vector& normale, double& t, Vector& couleur, float correction_gamma) = 0;
 	Vector rho;
 	double n_refraction;
 	bool mirror, transparency;
@@ -133,7 +133,7 @@ public:
 		this->mirror = mirror;
 		this->transparency = transparency;
 	}
-	bool intersect(const Ray& r, Vector& P, Vector& N, double& t, Vector& couleur) {
+	bool intersect(const Ray& r, Vector& P, Vector& N, double& t, Vector& couleur, float correction_gamma) {
 		// pour resoudre a*t^2 + b*t + c = 0
 		double a = 1;
 		double b = 2 * dot(r.u, r.C - O);
@@ -489,7 +489,7 @@ public:
 		textures.push_back(texture);
 	}
 
-	bool intersect(const Ray& r, Vector& P, Vector& normale, double& t, Vector& couleur) {
+	bool intersect(const Ray& r, Vector& P, Vector& normale, double& t, Vector& couleur, float correction_gamma) {
 		if (!BVH->b.intersect(r)) return false;
 
 		t = 1E10;
@@ -547,9 +547,9 @@ public:
 							if (uvy < 0) {
 								uvy += H;
 							}
-							couleur = Vector(std::pow(textures[indices[i].group][(uvy * W + uvx) * 3 + 0] / 255., 2.2), // 2.2 pour la correction gamma, a mettre ailleurs pour que ce soit plus propre
-								std::pow(textures[indices[i].group][(uvy * W + uvx) * 3 + 1] / 255., 2.2),
-								std::pow(textures[indices[i].group][(uvy * W + uvx) * 3 + 2] / 255., 2.2) );
+							couleur = Vector(std::pow(textures[indices[i].group][(uvy * W + uvx) * 3 + 0] / 255., 1/correction_gamma), // 2.2 pour la correction gamma, a mettre ailleurs pour que ce soit plus propre
+								std::pow(textures[indices[i].group][(uvy * W + uvx) * 3 + 1] / 255., 1 / correction_gamma),
+								std::pow(textures[indices[i].group][(uvy * W + uvx) * 3 + 2] / 255., 1 / correction_gamma) );
 						}
 					}
 				}
@@ -579,12 +579,12 @@ class Scene { // Scene globale, dans laquelle on insert nos objets
 public:
 	Scene(Light& Lum, Vector& color, double n_refrac_scene) : Lum(Lum), color(color), n_refrac_scene(n_refrac_scene) {
 	}
-	bool intersect_scene(const Ray& rayon, Vector& P, Vector& N, double& t, int& objectId, Vector& couleur) {
+	bool intersect_scene(const Ray& rayon, Vector& P, Vector& N, double& t, int& objectId, Vector& couleur, float correction_gamma) {
 		bool bool_sortie = false;
 		for (int i = 0; i < objects.size(); i++) {
 			Vector P_current, N_current, couleur_current;
 			double t_current;
-			bool inter = objects[i]->intersect(rayon, P_current, N_current, t_current, couleur_current);
+			bool inter = objects[i]->intersect(rayon, P_current, N_current, t_current, couleur_current, correction_gamma);
 			if (inter && (t_current < t)) {
 				P = P_current;
 				N = N_current;
@@ -606,7 +606,7 @@ public:
 		return bool_sortie;
 	}
 
-	Vector getColor(Ray& rayon, const int& rebond, bool lastDiffuse) {
+	Vector getColor(Ray& rayon, const int& rebond, bool lastDiffuse, float correction_gamma) {
 
 		if (rebond > 10) return Vector(0., 0., 0.);
 
@@ -618,7 +618,7 @@ public:
 		int objectId;
 		
 		//Sphere sphere_intersect(Vector(0,0,0), 0., Vector(0,0,0), 1, false, false, false);
-		bool inter = intersect_scene(rayon, P, N, t, objectId, couleur);
+		bool inter = intersect_scene(rayon, P, N, t, objectId, couleur, correction_gamma);
 		if (inter) {
 
 			if (objectId == 0) {
@@ -640,7 +640,7 @@ public:
 					Vector reflex = rayon.u - 2 * dot(rayon.u, N) * N;
 					Ray rayon_reflechi(P + epsilon * reflex, reflex.get_normalized());
 					
-					return getColor(rayon_reflechi, rebond + 1, false);
+					return getColor(rayon_reflechi, rebond + 1, false, correction_gamma);
 				}
 				else {
 					if (objects[objectId]->transparency) {
@@ -657,12 +657,12 @@ public:
 						if (radical < 0) {
 							Vector reflex = rayon.u - 2 * dot(rayon.u, N2) * N2;
 							Ray rayon_reflechi(P + epsilon * N2, reflex.get_normalized());
-							return getColor(rayon_reflechi, rebond + 1, false);
+							return getColor(rayon_reflechi, rebond + 1, false, correction_gamma);
 						}
 						Vector t_n = -sqrt(radical) * N2;
 						Vector vect_dir_refracte = t_t + t_n;
 						Ray rayon_refracte(P - epsilon * N2, vect_dir_refracte);
-						return getColor(rayon_refracte, rebond + 1, false);
+						return getColor(rayon_refracte, rebond + 1, false, correction_gamma);
 
 					}
 					else {
@@ -680,7 +680,7 @@ public:
 						//bool shadowMirror, shadowTransparency;
 						Ray shadowRay(P + epsilon * N, Pxprime);
 						//Sphere sphere_intersect_shadow(Vector(0, 0, 0), 0., Vector(0, 0, 0), 1, false, false, false);
-						bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowt, shadow_objectId, shadowCouleur);
+						bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowt, shadow_objectId, shadowCouleur, correction_gamma);
 						if (shadowInter && shadowt < d-epsilon*10) {
 							couleur_return = Vector(0., 0., 0.);
 						}
@@ -694,7 +694,7 @@ public:
 						// eclairage indirect
 						Vector random_vector = random_cos(N);
 						Ray rayon_indirect(P + epsilon * random_vector, random_vector.get_normalized());
-						couleur_return += couleur * getColor(rayon_indirect, rebond + 1, true);
+						couleur_return += couleur * getColor(rayon_indirect, rebond + 1, true, correction_gamma);
 					}
 				}
 			}
@@ -757,8 +757,8 @@ void integrateCosDimQuatre() {
 int main() {
 	
 	auto start = std::chrono::high_resolution_clock::now();
-	int W = 1024;
-	int H = 1024;
+	int W = 256;
+	int H = 256;
 
 	Light Lum(double(2E9), Vector(-10, 20, 40));
 	Vector couleur(0, 0, 0);
@@ -866,7 +866,6 @@ int main() {
 		m.normals[i][2] = -m.normals[i][2];
 	}*/
 
-
 	//m.buildBB();
 	m.buildBVH(m.BVH, 0, m.indices.size());
 
@@ -880,7 +879,6 @@ int main() {
 	//scene.objects.push_back(&S_transparente_centre);
 	//scene.objects.push_back(&S_creuse_exterieur_droite);
 	//scene.objects.push_back(&S_creuse_interieur_droite);
-	double gamma = 0.45;
 	
 	scene.objects.push_back(&SMurFace);
 	scene.objects.push_back(&SMurDos);
@@ -889,7 +887,8 @@ int main() {
 	scene.objects.push_back(&SMurDroite);
 	scene.objects.push_back(&SMurGauche);
 
-	int nb_ray = 100;
+	double correction_gamma = 0.45;
+	int nb_ray = 10;
 	double distance_plan_nettete = 55.;
 	double rayon_obturateur = 0.01;
 
@@ -934,13 +933,13 @@ int main() {
 
 				Ray rayon(Cprime, uprime);
 				bool lastDiffuse = false;
-				coul += scene.getColor(rayon, int(0), lastDiffuse);
+				coul += scene.getColor(rayon, int(0), lastDiffuse, correction_gamma);
 			}
 			coul = coul / nb_ray;
 			
-			image[((H - i - 1) * W + j) * 3 + 0] = std::min(255., std::pow(coul[0], gamma) );
-			image[((H - i - 1) * W + j) * 3 + 1] = std::min(255., std::pow(coul[1], gamma) );
-			image[((H - i - 1) * W + j) * 3 + 2] = std::min(255., std::pow(coul[2], gamma) );
+			image[((H - i - 1) * W + j) * 3 + 0] = std::min(255., std::pow(coul[0], correction_gamma) );
+			image[((H - i - 1) * W + j) * 3 + 1] = std::min(255., std::pow(coul[1], correction_gamma) );
+			image[((H - i - 1) * W + j) * 3 + 2] = std::min(255., std::pow(coul[2], correction_gamma) );
 
 		}
 	}
