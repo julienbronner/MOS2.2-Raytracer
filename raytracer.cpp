@@ -25,27 +25,27 @@ static std::uniform_real_distribution<double> uniform(0, 1);
 class Vector { //Classe pour définir un vecteur, défini egalement un point et une couleur, donc défini une entité à trois coordonnées
 public:
 	explicit Vector(double x = 0, double y = 0, double z = 0) {
-		coords[0] = x;
-		coords[1] = y;
-		coords[2] = z;
+		coordonnees[0] = x;
+		coordonnees[1] = y;
+		coordonnees[2] = z;
 	};
-	double operator[](int i) const { return coords[i]; };
-	double& operator[](int i) { return coords[i]; };
+	double operator[](int i) const { return coordonnees[i]; };
+	double& operator[](int i) { return coordonnees[i]; };
 	Vector& operator+=(const Vector& a) {
-		coords[0] += a[0];
-		coords[1] += a[1];
-		coords[2] += a[2];
+		coordonnees[0] += a[0];
+		coordonnees[1] += a[1];
+		coordonnees[2] += a[2];
 		return *this;
 	};
 	double sqrNorm() const {
-		return coords[0] * coords[0] + coords[1] * coords[1] + coords[2] * coords[2];
+		return coordonnees[0] * coordonnees[0] + coordonnees[1] * coordonnees[1] + coordonnees[2] * coordonnees[2];
 	};
 	Vector get_normalized() const {
 		double norm = sqrt(sqrNorm());
-		return Vector(coords[0] / norm, coords[1] / norm, coords[2] / norm);
+		return Vector(coordonnees[0] / norm, coordonnees[1] / norm, coordonnees[2] / norm);
 	};
 private:
-	double coords[3];
+	double coordonnees[3];
 };
 
 Vector operator+(const Vector& a, const Vector& b) {
@@ -98,7 +98,7 @@ Vector random_cos(const Vector& N) {
 	}
 	T1 = T1.get_normalized();
 	Vector T2 = cross(N, T1);
-	//return z * N + x * T1 + y * T2;
+
 	return z * N - x * T1 - y * T2;
 
 }
@@ -122,9 +122,9 @@ public:
 
 class Sphere : public Object { // Définition d'une sphere
 	/* Origine O, rayon R, couleur/albedo rho
-	* indice de refraction n_refraction
-	* Booléen qui disent si la sphere est un mirroir, si elle est transparente, 
-	* ou si c'est une sphere inversée pour pouvoir définir une sphere creuse
+	indice de refraction n_refraction
+	Booléen qui disent si la sphere est un mirroir, si elle est transparente, 
+	ou si c'est une sphere inversée pour pouvoir définir une sphere creuse
 	*/
 public:
 	Sphere(const Vector& O, double R, Vector rho, double n_refraction, bool mirror, bool transparency, bool sphere_inverse) : O(O), R(R), sphere_inverse(sphere_inverse){
@@ -182,28 +182,28 @@ public:
 class BoundingBox {
 public:
 	bool intersect(const Ray& r) {
-		double t1x = (mini[0] - r.C[0]) / r.u[0];
-		double t2x = (maxi[0] - r.C[0]) / r.u[0];
-		double txMin = std::min(t1x, t2x);
-		double txMax = std::max(t1x, t2x);
+		double p1x = (mini[0] - r.C[0]) / r.u[0];
+		double p2x = (maxi[0] - r.C[0]) / r.u[0];
+		double pxMin = std::min(p1x, p2x);
+		double pxMax = std::max(p1x, p2x);
 
-		double t1y = (mini[1] - r.C[1]) / r.u[1];
-		double t2y = (maxi[1] - r.C[1]) / r.u[1];
-		double tyMin = std::min(t1y, t2y);
-		double tyMax = std::max(t1y, t2y);
+		double p1y = (mini[1] - r.C[1]) / r.u[1];
+		double p2y = (maxi[1] - r.C[1]) / r.u[1];
+		double pyMin = std::min(p1y, p2y);
+		double pyMax = std::max(p1y, p2y);
 
-		double t1z = (mini[2] - r.C[2]) / r.u[2];
-		double t2z = (maxi[2] - r.C[2]) / r.u[2];
-		double tzMin = std::min(t1z, t2z);
-		double tzMax = std::max(t1z, t2z);
+		double p1z = (mini[2] - r.C[2]) / r.u[2];
+		double p2z = (maxi[2] - r.C[2]) / r.u[2];
+		double pzMin = std::min(p1z, p2z);
+		double pzMax = std::max(p1z, p2z);
 
-		double tMax = std::min(txMax, std::min(tyMax, tzMax));
-		double tMin = std::max(txMin, std::max(tyMin, tzMin));
+		double pMax = std::min(pxMax, std::min(pyMax, pzMax));
+		double pMin = std::max(pxMin, std::max(pyMin, pzMin));
 
-		if (tMax < 0) {
+		if (pMax < 0) {
 			return false;
 		};
-		return tMax > tMin;
+		return pMax > pMin;
 	}
 	Vector mini, maxi;
 };
@@ -212,7 +212,7 @@ class Noeud {
 public:
 	Noeud* fg, * fd;
 	BoundingBox b;
-	int debut, fin_exclu;
+	int debut, fin_exclue;
 };
 
 // Code simple obj file reader
@@ -239,11 +239,11 @@ public:
 		this->transparency = transparency;
 	};
 
-	BoundingBox buildBB(int debut, int fin) { //debut et fin sont des indices de triangle
+	BoundingBox buildBB(int debut, int fin_exlue) { //debut et fin_exlue sont des indices de triangle
 		BoundingBox BB;
 		BB.mini = Vector(1E9, 1E9, 1E9);
 		BB.maxi = Vector(-1E9, -1E9, -1E9);
-		for (int i = debut; i < fin; i++) {
+		for (int i = debut; i < fin_exlue; i++) {
 			for(int j = 0; j< 3; j++){
 				BB.mini[j] = std::min(BB.mini[j], vertices[indices[i].vtxi][j]);
 				BB.mini[j] = std::min(BB.mini[j], vertices[indices[i].vtxj][j]);
@@ -257,17 +257,17 @@ public:
 		return BB;
 	};
 
-	void buildBVH(Noeud* n, int debut, int fin_exclu) {
+	void buildBVH(Noeud* n, int debut, int fin_exclue) {
 		n->debut = debut;
-		n->fin_exclu = fin_exclu;
-		n->b = buildBB(debut, fin_exclu);
-		Vector diag = n->b.maxi - n->b.mini;
+		n->fin_exclue = fin_exclue;
+		n->b = buildBB(debut, fin_exclue);
+		Vector diagonale = n->b.maxi - n->b.mini;
 		int dim;
-		if (diag[0] >= diag[1] && diag[0] >= diag[2]) {
+		if (diagonale[0] >= diagonale[1] && diagonale[0] >= diagonale[2]) {
 			dim = 0;
 		}
 		else {
-			if (diag[1] >= diag[0] && diag[1] >= diag[2]) {
+			if (diagonale[1] >= diagonale[0] && diagonale[1] >= diagonale[2]) {
 				dim = 1;
 			}
 			else {
@@ -276,7 +276,7 @@ public:
 		}
 		double milieu = (n->b.mini[dim] + n->b.maxi[dim]) /2.;
 		int indice_pivot = n->debut;
-		for (int i = n->debut; i < n->fin_exclu; i++) {
+		for (int i = n->debut; i < n->fin_exclue; i++) {
 			double milieu_triangle = (vertices[indices[i].vtxi][dim] + vertices[indices[i].vtxj][dim] + vertices[indices[i].vtxk][dim]) / 3.;
 			if (milieu_triangle < milieu) {
 				std::swap(indices[i], indices[indice_pivot]);
@@ -287,7 +287,7 @@ public:
 		n->fg = NULL;
 		n->fd = NULL;
 		int nbr_triangle_critere_arret = 5;
-		if (indice_pivot == debut || indice_pivot == fin_exclu || (fin_exclu - debut < nbr_triangle_critere_arret)) {
+		if (indice_pivot == debut || indice_pivot == fin_exclue || (fin_exclue - debut < nbr_triangle_critere_arret)) {
 			return;
 		}
 
@@ -295,7 +295,7 @@ public:
 		n->fd = new Noeud;
 
 		buildBVH(n->fg, n->debut, indice_pivot);
-		buildBVH(n->fd, indice_pivot, n->fin_exclu);
+		buildBVH(n->fd, indice_pivot, n->fin_exclue);
 
 	}
 
@@ -498,58 +498,57 @@ public:
 		std::list<Noeud*> l;
 		l.push_back(BVH);
 		while (!l.empty()) {
-			Noeud* courant = l.front();
+			Noeud* noeud_courant = l.front();
 			l.pop_front();
 
-			if (courant->fg) {
-				if (courant->fg->b.intersect(r)) {
-					l.push_front(courant->fg);
+			if (noeud_courant->fg) {
+				if (noeud_courant->fg->b.intersect(r)) {
+					l.push_front(noeud_courant->fg);
 				}
-				if (courant->fd->b.intersect(r)) {
-					l.push_front(courant->fd);
+				if (noeud_courant->fd->b.intersect(r)) {
+					l.push_front(noeud_courant->fd);
 				}
 			}
 			else {
-				for (int i = courant->debut; i < courant->fin_exclu; i++) {
-					const Vector& A = vertices[indices[i].vtxi];
-					const Vector& B = vertices[indices[i].vtxj];
-					const Vector& C = vertices[indices[i].vtxk];
+				for (int i = noeud_courant->debut; i < noeud_courant->fin_exclue; i++) {
+					const Vector& point_A = vertices[indices[i].vtxi];
+					const Vector& point_B = vertices[indices[i].vtxj];
+					const Vector& point_C = vertices[indices[i].vtxk];
 
-					Vector e1 = B - A;
-					Vector e2 = C - A;
-					Vector N = cross(e1, e2);
-					Vector AO = r.C - A;
-					Vector AOu = cross(AO, r.u);
-					double invUN = 1. / dot(r.u, N);
-					double beta = -dot(e2, AOu) * invUN;
-					double gamma = dot(e1, AOu) * invUN;
+					Vector vecteur_e1 = point_B - point_A;
+					Vector vecteur_e2 = point_C - point_A;
+					Vector vecteur_N = cross(vecteur_e1, vecteur_e2);
+					Vector vecteur_AO = r.C - point_A;
+					Vector vecteur_AOu = cross(vecteur_AO, r.u);
+					double invUN = 1. / dot(r.u, vecteur_N);
+					double beta = -dot(vecteur_e2, vecteur_AOu) * invUN;
+					double gamma = dot(vecteur_e1, vecteur_AOu) * invUN;
 					double alpha = 1 - beta - gamma;
-					double localt = -dot(AO, N) * invUN;
+					double localt = -dot(vecteur_AO, vecteur_N) * invUN;
 					if (beta >= 0 && gamma >= 0 && beta <= 1 && gamma <= 1 && alpha >= 0 && localt >= 0) {
 						intersect_bool = true;
 						if (localt < t) {
 							t = localt;
-							//normale = N.get_normalized();
 							normale = alpha * normals[indices[i].ni] + beta * normals[indices[i].nj] + gamma * normals[indices[i].nk];
 							normale = normale.get_normalized(); // on peut améliorer en ne gardant que l'indice et on calcul ça a la fin
 							P = r.C + t * r.u;
 							Vector UV = alpha * uvs[indices[i].uvi] + beta * uvs[indices[i].uvj] + gamma * uvs[indices[i].uvk];
-							int W = Wtexture[indices[i].group];
-							int H = Htexture[indices[i].group];
-							UV = UV * Vector(W, H, 0);
+							int Width = Wtexture[indices[i].group];
+							int Heigth = Htexture[indices[i].group];
+							UV = UV * Vector(Width, Heigth, 0);
 							int uvx = UV[0] + 0.5; //arrondi à l'entier supérieur
-							int uvy = H - UV[1] + 0.5;
-							uvx = uvx % W; 
-							uvy = uvy % H;
+							int uvy = Heigth - UV[1] + 0.5;
+							uvx = uvx % Width;
+							uvy = uvy % Heigth;
 							if (uvx < 0) {
-								uvx += W;
+								uvx += Width;
 							}
 							if (uvy < 0) {
-								uvy += H;
+								uvy += Heigth;
 							}
-							couleur = Vector(std::pow(textures[indices[i].group][(uvy * W + uvx) * 3 + 0] / 255., 1/correction_gamma), // 2.2 pour la correction gamma, a mettre ailleurs pour que ce soit plus propre
-								std::pow(textures[indices[i].group][(uvy * W + uvx) * 3 + 1] / 255., 1 / correction_gamma),
-								std::pow(textures[indices[i].group][(uvy * W + uvx) * 3 + 2] / 255., 1 / correction_gamma) );
+							couleur = Vector(std::pow(textures[indices[i].group][(uvy * Width + uvx) * 3 + 0] / 255., 1/correction_gamma), // car l'image est calculé avec correction gamma, donc on risque de l'appliquer deux fois
+								std::pow(textures[indices[i].group][(uvy * Width + uvx) * 3 + 1] / 255., 1 / correction_gamma),
+								std::pow(textures[indices[i].group][(uvy * Width + uvx) * 3 + 2] / 255., 1 / correction_gamma) );
 						}
 					}
 				}
@@ -590,41 +589,29 @@ public:
 				N = N_current;
 				t = t_current;
 				couleur = couleur_current;
-				//sphere_intersect = objects[i];
-				/*albedo = objects[i].rho;
-				n_refraction = objects[i].n_refraction;
-				mirror = objects[i].mirror;
-				transparency = objects[i].transparency;
-				R_sphere = objects[i].R;*/
 				objectId = i;
 				bool_sortie = true;
-				//Vector PL;
-				//PL = Lum.L - P;
-				//couleur = Lum.I / (4 * M_PI * PL.sqrNorm()) * std::max(0., dot(N, PL.get_normalized())) * S.rho / M_PI;
 			}
 		}
 		return bool_sortie;
 	}
 
-	Vector getColor(Ray& rayon, const int& rebond, bool lastDiffuse, float correction_gamma) {
+	Vector getColor(Ray& rayon, const int& rebond, bool dernier_element_diffus, float correction_gamma) {
 
 		if (rebond > 10) return Vector(0., 0., 0.);
 
 		Vector couleur_return = color;
-		Vector P, N, couleur;
+		Vector P, N, couleur_intersect;
 		double t = 2147483647;
-		/*double n_refraction, R_sphere;
-		bool mirror, transparency;*/
 		int objectId;
 		
-		//Sphere sphere_intersect(Vector(0,0,0), 0., Vector(0,0,0), 1, false, false, false);
-		bool inter = intersect_scene(rayon, P, N, t, objectId, couleur, correction_gamma);
+		bool inter = intersect_scene(rayon, P, N, t, objectId, couleur_intersect, correction_gamma);
 		if (inter) {
 
 			if (objectId == 0) {
-				if (rebond == 0 || !lastDiffuse) {
-					double sqr_R = sqr(dynamic_cast<Sphere*>(objects[0])->R);
-					return Vector(Lum.I, Lum.I, Lum.I) / (4 * M_PI * M_PI * sqr_R);
+				if (rebond == 0 || !dernier_element_diffus) {
+					double sqr_Rayon = sqr(dynamic_cast<Sphere*>(objects[0])->R);
+					return Vector(Lum.I, Lum.I, Lum.I) / (4 * M_PI * M_PI * sqr_Rayon);
 				}
 
 				else {
@@ -637,8 +624,8 @@ public:
 				double epsilon = 0.001;
 				if (objects[objectId]->mirror) {
 					// cas d'une sphere miroir
-					Vector reflex = rayon.u - 2 * dot(rayon.u, N) * N;
-					Ray rayon_reflechi(P + epsilon * reflex, reflex.get_normalized());
+					Vector direction_reflechie = rayon.u - 2 * dot(rayon.u, N) * N;
+					Ray rayon_reflechi(P + epsilon * direction_reflechie, direction_reflechie.get_normalized());
 					
 					return getColor(rayon_reflechi, rebond + 1, false, correction_gamma);
 				}
@@ -649,18 +636,18 @@ public:
 						Vector N2 = N;
 				
 						if (dot(rayon.u, N) > 0) {
-							std::swap(n1, n2);
+							std::swap(n1, n2); // Si l'on sort de l'objet 
 							N2 = -N;
 						}
-						Vector t_t = n1 / n2 * (rayon.u - dot(rayon.u, N2) * N2);
+						Vector t_transversal = n1 / n2 * (rayon.u - dot(rayon.u, N2) * N2);
 						double radical = 1 - sqr(n1 / n2) * (1 - sqr(dot(rayon.u, N2)));
 						if (radical < 0) {
-							Vector reflex = rayon.u - 2 * dot(rayon.u, N2) * N2;
-							Ray rayon_reflechi(P + epsilon * N2, reflex.get_normalized());
+							Vector direction_reflechie = rayon.u - 2 * dot(rayon.u, N2) * N2;
+							Ray rayon_reflechi(P + epsilon * N2, direction_reflechie.get_normalized());
 							return getColor(rayon_reflechi, rebond + 1, false, correction_gamma);
 						}
-						Vector t_n = -sqrt(radical) * N2;
-						Vector vect_dir_refracte = t_t + t_n;
+						Vector t_normal = -sqrt(radical) * N2;
+						Vector vect_dir_refracte = t_transversal + t_normal;
 						Ray rayon_refracte(P - epsilon * N2, vect_dir_refracte);
 						return getColor(rayon_refracte, rebond + 1, false, correction_gamma);
 
@@ -670,31 +657,28 @@ public:
 						Vector w = random_cos(-PL); // on veut LP
 						Vector xprime = w * dynamic_cast<Sphere*>(objects[0])->R + dynamic_cast<Sphere*>(objects[0])->O;
 						Vector Pxprime = xprime - P;
-						double d = sqrt(Pxprime.sqrNorm()); 
-						Pxprime = Pxprime / d;
+						double norme_Pxprime = sqrt(Pxprime.sqrNorm()); 
+						Pxprime = Pxprime / norme_Pxprime; //on normalise
 
 						Vector shadowP, shadowN, shadowAlbedo, shadowCouleur;
 						int shadow_objectId;
 						double shadowt = 2147483647;
-						//double shadow_nRefraction, shadow_R_Sphere;
-						//bool shadowMirror, shadowTransparency;
 						Ray shadowRay(P + epsilon * N, Pxprime);
-						//Sphere sphere_intersect_shadow(Vector(0, 0, 0), 0., Vector(0, 0, 0), 1, false, false, false);
 						bool shadowInter = intersect_scene(shadowRay, shadowP, shadowN, shadowt, shadow_objectId, shadowCouleur, correction_gamma);
-						if (shadowInter && shadowt < d-epsilon*10) {
+						if (shadowInter && shadowt < norme_Pxprime - epsilon*10) {
 							couleur_return = Vector(0., 0., 0.);
 						}
 						else {
-							double sqr_R = sqr(dynamic_cast<Sphere*>(objects[0])->R);
-							double proba = std::max(0. ,dot(-PL, w)) / (M_PI* sqr_R);
-							double J = std::max(0., dot(w, -Pxprime))/(d*d);
-							couleur_return = Lum.I / (4 * M_PI * sqr_R) * std::max(0., dot(N, Pxprime)) * couleur / M_PI * J / proba;
+							double sqr_Rayon = sqr(dynamic_cast<Sphere*>(objects[0])->R);
+							double proba = std::max(0. ,dot(-PL, w)) / (M_PI* sqr_Rayon);
+							double J = std::max(0., dot(w, -Pxprime))/(norme_Pxprime  * norme_Pxprime);
+							couleur_return = Lum.I / (4 * M_PI * sqr_Rayon) * std::max(0., dot(N, Pxprime)) * couleur_intersect / M_PI * J / proba;
 						}
 
 						// eclairage indirect
 						Vector random_vector = random_cos(N);
 						Ray rayon_indirect(P + epsilon * random_vector, random_vector.get_normalized());
-						couleur_return += couleur * getColor(rayon_indirect, rebond + 1, true, correction_gamma);
+						couleur_return += couleur_intersect * getColor(rayon_indirect, rebond + 1, true, correction_gamma);
 					}
 				}
 			}
@@ -708,6 +692,7 @@ public:
 	double n_refrac_scene;
 };
 
+// Code pour découvrir la méthode de Monte Carlo
 void integrateCos() {
 	double N = std::pow(10, 6);
 	double sigma = 0.3;
@@ -752,7 +737,7 @@ void integrateCosDimQuatre() {
 	s = s / N;
 	std::cout << "Resultat de Monte-Carlo " << s << std::endl;
 }
-
+// Fin code pour découvrir la méthode de Monte Carlo
 
 int main() {
 	
@@ -767,15 +752,17 @@ int main() {
 	Vector C(0, 0, 55); // camera (droite, haut, direction regard)
 	
 	// Mouvement de caméra
-	double verticalAngle = -0 * M_PI / 180;
-	double horizontalAngle = -0 * M_PI / 180;
-	Vector up(0, cos(verticalAngle), sin(verticalAngle));
-	Vector right(cos(horizontalAngle), 0, sin(horizontalAngle));
-	double up0 = up[0];
-	up[0] = cos(horizontalAngle) * up[0] - sin(horizontalAngle) * up[2];
-	up[2] = sin(horizontalAngle) * up0 + cos(horizontalAngle) * up[2];
+	double verticalAngleRadian = 0; // orienté positivement vers le bas
+	double horizontalAngleRadian = 0; // orienté posivement vers la gauche
+	double verticalAngle = -verticalAngleRadian * M_PI / 180;
+	double horizontalAngle = -horizontalAngleRadian * M_PI / 180;
+	Vector vecteur_up(0, cos(verticalAngle), sin(verticalAngle));
+	Vector vecteur_right(cos(horizontalAngle), 0, sin(horizontalAngle));
+	double vecteur_up0 = vecteur_up[0];
+	vecteur_up[0] = cos(horizontalAngle) * vecteur_up[0] - sin(horizontalAngle) * vecteur_up[2];
+	vecteur_up[2] = sin(horizontalAngle) * vecteur_up0 + cos(horizontalAngle) * vecteur_up[2];
 
-	Vector viewDir = cross(up, right);
+	Vector direction_regard = cross(vecteur_up, vecteur_right);
 	
 	int r = 10;
 
@@ -812,7 +799,7 @@ int main() {
 		std::swap(m.normals[i][1], m.normals[i][2]);
 		m.normals[i][2] = -m.normals[i][2];
 	}*/
-
+	// Fin code Cattle Dog
 
 	// Code Link
 	std::string path_chargement = "D:/julbr/Documents/ecole/ECL/3A/MOS_2.2_Informatique_Graphique/Maillages/oot-link-obj/";
@@ -861,15 +848,13 @@ int main() {
 		m.vertices[i][1] -= 10;
 		m.vertices[i][2] += 10;
 	}
-	/*for (int i = 0; i < m.normals.size(); i++) {
-		std::swap(m.normals[i][1], m.normals[i][2]);
-		m.normals[i][2] = -m.normals[i][2];
-	}*/
+	// Fin Code Link
 
 	//m.buildBB();
 	m.buildBVH(m.BVH, 0, m.indices.size());
 
-	double fov = 60 * M_PI / 180;
+	double fov_radian = 60;
+	double fov = fov_radian * M_PI / 180;
 	scene.objects.push_back(&SLum);
 	//scene.objects.push_back(&S0);
 	//scene.objects.push_back(&S1);
@@ -898,10 +883,7 @@ int main() {
 		std::cout << "Pixel hauteur: " << i << std::endl;
 		for (int j = 0; j < W; j++) {
 			
-			Vector coul = scene.color;
-
-			//Vector coul = scene.getColor(rayon, int(0));
-			//Vector coul = (scene.getColor(rayon, int(0)) + scene.getColor(rayon, int(0)))/2;
+			Vector coul = scene.color; // on initialise avec une couleur de base de la scene
 
 			for(int k=0; k<nb_ray; k++){
 				double u1 = uniform(engine);
@@ -916,7 +898,7 @@ int main() {
 				while( (x_capteur * x_capteur + y_capteur * y_capteur) > rayon_obturateur){ // permet d'avoir des valeurs dans le cercle de rayon obturateur
 					u3 = uniform(engine);
 					u4 = uniform(engine);
-					x_capteur = u3 * 2 * rayon_obturateur - rayon_obturateur; // pour avoir des valeurs entre -rayon_obt et +rayon_obt
+					x_capteur = u3 * 2 * rayon_obturateur - rayon_obturateur;
 					y_capteur = u4 * 2 * rayon_obturateur - rayon_obturateur;
 				}
 				/*double x_capteur = sqrt(1 - u3) * cos(2 * M_PI * u4);
@@ -924,16 +906,16 @@ int main() {
 
 				Vector u(j - W / 2 + x, i - H / 2 + y, W / (2 * tan(fov / 2)));
 				u = u.get_normalized();
-				u = u[0] * right + u[1] * up + u[2] * viewDir;
+				u = u[0] * vecteur_right + u[1] * vecteur_up + u[2] * direction_regard;
 
 				Vector cible = C + distance_plan_nettete * u;
-				Vector Cprime = C + x_capteur * right + y_capteur * up;
+				Vector Cprime = C + x_capteur * vecteur_right + y_capteur * vecteur_up;
 				//Vector Cprime = C + Vector(x_capteur, y_capteur, 0);
 				Vector uprime = (cible - Cprime).get_normalized();
 
 				Ray rayon(Cprime, uprime);
-				bool lastDiffuse = false;
-				coul += scene.getColor(rayon, int(0), lastDiffuse, correction_gamma);
+				bool dernier_element_diffus = false;
+				coul += scene.getColor(rayon, int(0), dernier_element_diffus, correction_gamma);
 			}
 			coul = coul / nb_ray;
 			
